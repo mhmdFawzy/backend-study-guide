@@ -22,7 +22,29 @@ const backendConcepts = [
       "GET reads data, POST creates, PUT/PATCH updates, DELETE removes",
       "Status codes: 2xx success, 4xx client error, 5xx server error",
       "Headers carry metadata (auth tokens, content type, caching rules)",
-      "HTTPS encrypts the connection with TLS",
+      "HTTPS encrypts the connection with TLS (Transport Layer Security)",
+    ],
+    terminology: [
+      {
+        term: "HTTP method",
+        definition: "The verb on a request (GET, POST, etc.) that tells the server what action you want.",
+      },
+      {
+        term: "URL",
+        definition: "The address of a resource, e.g. https://api.example.com/users/42. Routing uses the path part.",
+      },
+      {
+        term: "Header",
+        definition: "Key-value metadata on a request or response (Content-Type, Authorization, etc.).",
+      },
+      {
+        term: "Body",
+        definition: "Optional payload on POST/PUT/PATCH — usually JSON for APIs.",
+      },
+      {
+        term: "Status code",
+        definition: "A 3-digit number in the response (200 OK, 404 Not Found, 500 Server Error).",
+      },
     ],
     example: {
       title: "A typical GET request and 200 response",
@@ -57,9 +79,23 @@ Content-Type: application/json
       "Like a restaurant that's always open — staff (your backend code) wait for orders (HTTP requests) even when no customers are there. Your React app is the customer placing orders.",
     keyPoints: [
       "Servers listen on a port (e.g. 3000, 8080) for incoming requests",
-      "Can be a single machine or many behind a load balancer",
+      "Multiple servers can sit behind a load balancer — a traffic director that sends each request to one available server",
       "You pay for uptime — the server runs even when idle",
       "Production servers need monitoring, updates, and security patches",
+    ],
+    terminology: [
+      {
+        term: "Port",
+        definition: "A number (e.g. 3000, 443) that identifies which program on a server receives the request.",
+      },
+      {
+        term: "Load balancer",
+        definition: "A traffic director in front of several servers — it picks one server per request so no single machine gets overloaded.",
+      },
+      {
+        term: "Uptime",
+        definition: "How long a server stays running and reachable. Always-on servers cost money even when idle.",
+      },
     ],
     example: {
       title: "A minimal Node.js HTTP server",
@@ -99,41 +135,79 @@ server.listen(3000, () => {
     title: "Routing",
     phase: "Foundations",
     summary:
-      "Routing maps a URL + HTTP method to the code that handles it. Path params (`/users/:id`) and query params (`?page=2`) extract data from the URL.",
+      "Routing matches an HTTP method + URL path to the handler function that should run. The path identifies which resource you want; an optional query string adds filters without changing the handler.",
     frontendAnalogy:
-      "Like React Router — a URL path decides which component (handler) renders. On the backend, the path decides which function runs.",
+      "Like React Router — the URL path picks which page (handler) renders. Query params are like `?tab=settings` in the browser bar: extra info, same page.",
     keyPoints: [
-      "Static routes: `/health` always hits the same handler",
-      "Dynamic routes: `/users/:id` captures `id` from the URL",
-      "Query strings filter/sort: `/users?role=admin&page=2`",
-      "Route groups help organize APIs: `/api/v1/users`",
+      "A full URL has scheme, host, port, path, query string, and optional fragment — routing mainly uses method + path",
+      "Path parameters are part of the path (`/users/42` → id is 42) and often pick the handler",
+      "Query string parameters come after `?` (`?page=2&role=admin`) — filters and pagination, same handler",
+      "Route prefixes organize APIs: `/api/v1/users` groups versioned endpoints",
+    ],
+    terminology: [
+      {
+        term: "Scheme",
+        definition: "Protocol prefix — `https://` (encrypted) or `http://`.",
+      },
+      {
+        term: "Host",
+        definition: "Domain name or IP, e.g. `api.example.com`. Tells the client which server to contact.",
+      },
+      {
+        term: "Port",
+        definition: "Optional number after the host (`:8080`). HTTPS defaults to 443; dev servers often use 3000.",
+      },
+      {
+        term: "Path",
+        definition: "Everything after the host up to `?`, e.g. `/api/users/42`. Routing maps paths to handlers.",
+      },
+      {
+        term: "Path parameter",
+        definition: "A dynamic segment in the path (`:id`, `/users/42`). Identifies a specific resource.",
+      },
+      {
+        term: "Query string",
+        definition: "Optional part after `?`, e.g. `?page=2&role=admin`. Key=value pairs for filtering; not part of the path.",
+      },
+      {
+        term: "Fragment",
+        definition: "Part after `#` (e.g. `#section`). Used by browsers for in-page anchors — usually ignored by APIs.",
+      },
+      {
+        term: "Route / handler",
+        definition: "The pairing of method + path pattern to the function that runs your business logic.",
+      },
     ],
     example: {
-      title: "Express-style route definitions",
-      language: "javascript",
-      code: `// List all users
-app.get('/api/users', listUsers);
+      title: "Complete URL anatomy + routing",
+      language: "text",
+      code: `# Full URL — every piece labeled
+https://api.example.com:443/api/users/42?page=2&role=admin#profile
+│      │                 │   │              │ │                 │
+scheme host              port path           │ query string      fragment
+                                             path param (id=42)  (browser only)
 
-// Get one user — :id is a path parameter
-app.get('/api/users/:id', getUser);
+# What routing matches (method + path pattern)
+GET  /api/users           → listUsers()        # static path
+GET  /api/users/:id       → getUser()          # :id is a path parameter
+GET  /api/users?role=admin → listUsers()       # same handler; query filters results
 
-// Create user — body parsed as JSON
-app.post('/api/users', createUser);
-
-// Query param example: GET /api/users?role=admin
-// Inside handler: req.query.role === 'admin'`,
+# In a handler (Express-style)
+// GET /api/users/42?fields=name
+req.params.id    // "42"  — from the path
+req.query.fields // "name" — from the query string`,
     },
     quiz: {
-      question: "In `/api/users/:id`, what is `:id`?",
+      question: "In `GET /api/users/42?page=2`, what is `page=2`?",
       options: [
-        "A query parameter",
         "A path parameter",
+        "A query string parameter",
         "An HTTP header",
-        "A request body field",
+        "Part of the hostname",
       ],
       correctIndex: 1,
       explanation:
-        "Path parameters are part of the URL path. Query parameters come after `?`.",
+        "Query string parameters appear after `?`. Path parameters like `42` are embedded in the path itself.",
     },
   },
   {
@@ -146,7 +220,7 @@ app.post('/api/users', createUser);
       "You already do this with `JSON.stringify()` before sending and `response.json()` when receiving. Backend does the same on the server side.",
     keyPoints: [
       "JSON is the most common text format for REST APIs",
-      "Binary formats (Protobuf) are faster but not human-readable",
+      "Binary formats like Protobuf (Google's compact binary format) are faster but not human-readable",
       "Always validate data after deserializing — never trust the client",
       "Watch out for dates, nulls, and extra/missing fields",
     ],
@@ -191,9 +265,31 @@ app.post('/api/users', (req, res) => {
       "Logging in with Google OAuth is authentication. Checking if you can access the admin dashboard is authorization — your app already does both on the frontend; the backend must enforce authz again.",
     keyPoints: [
       "Never trust the frontend — always verify tokens on the server",
-      "JWT: stateless token with encoded user info + signature",
-      "Sessions: server stores state, client holds a session cookie",
-      "OAuth lets users log in via Google/GitHub without sharing passwords",
+      "JWT (JSON Web Token): stateless token with encoded user info + cryptographic signature",
+      "Sessions: server stores login state; client holds a session cookie",
+      "OAuth lets users log in via Google/GitHub without giving your app their password",
+    ],
+    terminology: [
+      {
+        term: "Authentication (authn)",
+        definition: "Proves who you are — login with password, Google, etc.",
+      },
+      {
+        term: "Authorization (authz)",
+        definition: "Checks what you're allowed to do — admin vs viewer, read vs write.",
+      },
+      {
+        term: "JWT",
+        definition: "JSON Web Token — a signed string the client sends on each request; server verifies without storing session state.",
+      },
+      {
+        term: "OAuth",
+        definition: "Protocol for 'Log in with Google' — user authenticates with a provider, your app gets a token.",
+      },
+      {
+        term: "Session",
+        definition: "Server-side login state keyed by a cookie. Opposite of stateless JWT.",
+      },
     ],
     example: {
       title: "JWT flow (simplified)",
@@ -284,10 +380,28 @@ app.post('/api/users', (req, res) => {
     frontendAnalogy:
       "Think of middleware like a chain of React context providers or Next.js middleware — each layer can inspect, modify, or block the request before it reaches your page (handler).",
     keyPoints: [
-      "Each middleware calls `next()` to pass control forward",
+      "Each middleware calls `next()` to pass control to the next layer",
       "Order matters: auth before route handler, error handler last",
-      "Common uses: logging, CORS, rate limiting, auth, body parsing",
-      "Middleware can end the request early (e.g. return 401)",
+      "Common uses: logging, CORS (Cross-Origin Resource Sharing — lets browsers call APIs on other domains), rate limiting, auth, body parsing",
+      "Middleware can end the request early (e.g. return 401 Unauthorized)",
+    ],
+    terminology: [
+      {
+        term: "Middleware",
+        definition: "A function that runs between receiving a request and your handler — can log, auth, parse, or block.",
+      },
+      {
+        term: "next()",
+        definition: "Call this to pass the request to the next middleware or handler in the chain.",
+      },
+      {
+        term: "CORS",
+        definition: "Cross-Origin Resource Sharing — browser security rule; your API must send headers allowing your frontend's domain.",
+      },
+      {
+        term: "Body parsing",
+        definition: "Middleware that reads JSON from the request body into `req.body`.",
+      },
     ],
     example: {
       title: "Middleware pipeline",
@@ -809,14 +923,36 @@ const user = await db.query(
     title: "Scaling & Performance",
     phase: "Operations & Advanced",
     summary:
-      "Scaling means handling more traffic. Vertical = bigger server. Horizontal = more servers behind a load balancer. Optimize bottlenecks before scaling.",
+      "Scaling means handling more traffic. Vertical scaling = bigger server (more CPU/RAM). Horizontal scaling = more app copies behind a load balancer — a traffic director that sends each request to one available server.",
     frontendAnalogy:
       "Like code-splitting and lazy loading — don't load everything at once. Backend equivalent: cache hot data, paginate large lists, offload slow work to queues.",
     keyPoints: [
-      "Find bottlenecks first (DB queries, N+1 problems)",
-      "Horizontal scaling: multiple app instances + load balancer",
-      "Database read replicas for read-heavy apps",
+      "Find bottlenecks first (slow DB queries, N+1 problems)",
+      "Horizontal scaling: run multiple app instances; a load balancer distributes traffic across them",
+      "Read replica: a copy of the database for reads only — reduces load on the primary DB",
       "Pagination and compression reduce payload size",
+    ],
+    terminology: [
+      {
+        term: "Vertical scaling",
+        definition: "Make one server bigger (more CPU/RAM). Simple but has a ceiling.",
+      },
+      {
+        term: "Horizontal scaling",
+        definition: "Run more copies of your app. A load balancer picks which copy handles each request.",
+      },
+      {
+        term: "Load balancer",
+        definition: "Sits in front of multiple servers and distributes incoming requests so no single machine is overloaded.",
+      },
+      {
+        term: "Read replica",
+        definition: "A read-only copy of your database. Offloads SELECT queries from the primary (write) database.",
+      },
+      {
+        term: "N+1 query problem",
+        definition: "1 query to fetch a list, then N extra queries (one per row) for related data. Fix with joins or eager loading.",
+      },
     ],
     example: {
       title: "N+1 query problem",
@@ -857,7 +993,7 @@ const users = await db.users.findAll({
       "Event-driven: server pushes data when something happens",
       "Verify signatures to ensure requests are genuine",
       "Respond quickly (200 OK), process async if needed",
-      "Implement retries and idempotency for reliability",
+      "Implement retries and idempotency (handling the same event twice won't duplicate charges or records) for reliability",
     ],
     example: {
       title: "Stripe payment webhook",
@@ -1264,7 +1400,7 @@ PATCH /api/users/me  { avatarUrl: fileUrl }`,
       "WebSockets: two-way, persistent connection (chat, games)",
       "SSE: one-way server push (live feeds, notifications)",
       "Polling: client asks repeatedly — simple but wasteful",
-      "Pub/Sub (Redis) coordinates messages across server instances",
+      "Pub/Sub (publish/subscribe — often via Redis) broadcasts messages between multiple server instances",
     ],
     example: {
       title: "Server-Sent Events for live notifications",
@@ -1386,7 +1522,7 @@ XII. Migrations as one-off admin tasks`,
       ],
       correctIndex: 1,
       explanation:
-        "Stateless servers can scale horizontally — a load balancer can send requests to any instance.",
+        "Stateless servers can scale horizontally — a load balancer (traffic director) can send any request to any instance because no server holds session state in memory.",
     },
   },
   {

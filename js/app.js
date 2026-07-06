@@ -3,14 +3,14 @@ import {
   PHASES,
   backendConcepts,
   getConceptById,
-} from "./concepts.js?v=5";
+} from "./concepts.js?v=6";
 import {
   loadNotes,
   hasNote,
   renderNotesCard,
   setupBackupPanel,
   flushPendingNote,
-} from "./notes.js?v=5";
+} from "./notes.js?v=6";
 
 const STORAGE_KEY = "backend-study-progress";
 
@@ -298,6 +298,17 @@ function renderContent() {
     </div>
     <h2>${esc(concept.title)}</h2>
     <p class="summary">${esc(concept.summary)}</p>
+
+    ${concept.terminology?.length ? `
+    <div class="card terminology-card">
+      <h3>Terminology</h3>
+      <dl class="terminology-list">
+        ${concept.terminology.map((t) => `
+          <dt>${esc(t.term)}</dt>
+          <dd>${esc(t.definition)}</dd>
+        `).join("")}
+      </dl>
+    </div>` : ""}
 
     <div class="card amber">
       <h3>💡 Frontend perspective</h3>
