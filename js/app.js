@@ -3,7 +3,15 @@ import {
   PHASES,
   backendConcepts,
   getConceptById,
-} from "./concepts.js?v=3";
+} from "./concepts.js?v=4";
+import {
+  loadNotes,
+  hasNote,
+  renderNotesCard,
+  setupSyncPanel,
+  pullFromGist,
+  getSyncConfig,
+} from "./notes.js?v=4";
 
 const STORAGE_KEY = "backend-study-progress";
 
@@ -78,9 +86,11 @@ function renderNav() {
       .map((c) => {
         const isActive = c.id === activeId;
         const isDone = completed.has(c.id);
+        const hasNotes = hasNote(c.id);
         return `<button class="nav-btn${isActive ? " active" : ""}" data-id="${c.id}">
           <span class="dot${isDone ? " done" : ""}">${isDone ? "✓" : "○"}</span>
-          <span>${esc(c.title)}</span>
+          <span class="nav-title">${esc(c.title)}</span>
+          ${hasNotes ? '<span class="nav-note" aria-label="Has notes">📝</span>' : ""}
         </button>`;
       })
       .join("");
@@ -306,6 +316,7 @@ function renderContent() {
 
     <div id="demo-slot"></div>
     <div id="quiz-slot"></div>
+    <div id="notes-slot"></div>
 
     <a class="playlist-link" href="${PLAYLIST_URL}" target="_blank" rel="noopener">
       Watch in playlist: Backend from First Principles ↗
@@ -317,6 +328,9 @@ function renderContent() {
   if (concept.id === "middleware") demoSlot.appendChild(renderMiddlewarePipeline());
 
   content.querySelector("#quiz-slot").appendChild(renderQuiz(concept.quiz));
+  content.querySelector("#notes-slot").appendChild(
+    renderNotesCard(concept.id, concept.title, () => renderNav())
+  );
   updateCompleteBtn();
 }
 
@@ -398,5 +412,23 @@ function setupMobileNav() {
 }
 
 loadProgress();
+loadNotes();
 render();
+setupSyncPanel({ onRestore: () => {
+  loadProgress();
+  loadNotes();
+  render();
+}});
 setupMobileNav();
+
+if (getSyncConfig()?.token && getSyncConfig()?.gistId) {
+  pullFromGist()
+    .then((pulled) => {
+      if (pulled) {
+        loadProgress();
+        loadNotes();
+        render();
+      }
+    })
+    .catch(() => {});
+}
