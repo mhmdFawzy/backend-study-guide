@@ -38,6 +38,30 @@
         <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
         <p class="progress-hint">Mark topics complete or pass the quiz.</p>
       </div>
+      <div class="sync-card">
+        <div class="sync-header">
+          <span>Sync & backup</span>
+          <span id="sync-status" class="sync-status">Local only</span>
+        </div>
+        <p class="sync-hint">Notes survive redeploys in your browser. Back up to never lose them, or sync across devices with a private GitHub Gist.</p>
+        <div class="sync-actions">
+          <button id="btn-export-json" type="button" class="btn btn-outline btn-sm">Download backup</button>
+          <button id="btn-import-json" type="button" class="btn btn-outline btn-sm">Restore backup</button>
+          <button id="btn-export-notion" type="button" class="btn btn-outline btn-sm">Export for Notion</button>
+        </div>
+        <details class="gist-sync">
+          <summary>GitHub Gist sync (cross-device)</summary>
+          <p class="sync-hint">Create a <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener">fine-grained token</a> with <strong>Gists: Read and write</strong>. Stored only in this browser.</p>
+          <label class="sr-only" for="gist-token">GitHub token</label>
+          <input id="gist-token" class="sync-input" type="password" placeholder="github_pat_…" autocomplete="off" />
+          <div class="sync-actions">
+            <button id="btn-save-gist-token" type="button" class="btn btn-primary btn-sm">Enable sync</button>
+            <button id="btn-sync-now" type="button" class="btn btn-outline btn-sm">Push now</button>
+            <button id="btn-pull-gist" type="button" class="btn btn-outline btn-sm">Pull now</button>
+          </div>
+        </details>
+        <input id="import-file" type="file" accept="application/json,.json" hidden />
+      </div>
       <nav id="nav" class="nav"></nav>
     </aside>
 
@@ -53,6 +77,6 @@
     </main>
   </div>
 
-  <script type="module" src="js/app.js?v=3"></script>
+  <script type="module" src="js/app.js?v=4"></script>
 </body>
 </html>

@@ -239,6 +239,77 @@ a:hover { text-decoration: underline; }
 .nav-btn .dot { font-size: 0.7rem; flex-shrink: 0; }
 .nav-btn .dot.done { color: var(--green); }
 .nav-btn.active .dot.done { color: #86efac; }
+.nav-title { flex: 1; min-width: 0; }
+.nav-note { font-size: 0.75rem; flex-shrink: 0; opacity: 0.8; }
+
+.sync-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+.sync-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+.sync-status { font-size: 0.7rem; color: var(--muted); text-align: right; }
+.sync-hint { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.75rem; line-height: 1.45; }
+.sync-hint a { color: var(--muted); text-decoration: underline; }
+.sync-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem; }
+.btn-sm { min-height: 2.25rem; padding: 0.35rem 0.65rem; font-size: 0.8rem; }
+.gist-sync { margin-top: 0.5rem; font-size: 0.8rem; }
+.gist-sync summary { cursor: pointer; font-weight: 500; margin-bottom: 0.5rem; }
+.sync-input {
+  width: 100%;
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-family: var(--mono);
+}
+
+.notes-card { border-color: #c4b5fd; background: #faf5ff; }
+.notes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.notes-header h3 { margin-bottom: 0; }
+.notes-status { font-size: 0.7rem; color: var(--muted); }
+.notes-input {
+  width: 100%;
+  min-height: 7rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  resize: vertical;
+  background: var(--card);
+}
+.notes-input:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+.notes-hint { font-size: 0.75rem; color: var(--muted); margin-top: 0.5rem; }
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 
 /* Main */
 .main {
