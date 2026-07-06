@@ -42,15 +42,13 @@ npx serve .
 ## Deploy to GitHub Pages (free) — one command
 
 ```bash
-cd code/backend-study-guide
-./deploy.sh mhmdFawzy
+cd backend-study-guide
+./deploy.sh YOUR_GITHUB_USERNAME
 ```
 
-Then enable Pages: **Settings → Pages → Deploy from a branch → `main` → `/ (root)`**
+Then enable Pages: **Settings → Pages → Source → GitHub Actions**
 
-Your site: `https://mhmdfawzy.github.io/backend-study-guide/`
-
-**100% free** — no GitHub Actions, no build step, no cost.
+Your site: `https://YOUR_GITHUB_USERNAME.github.io/backend-study-guide/`
 
 ### Manual deploy
 

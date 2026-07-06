@@ -1367,11 +1367,11 @@ components:
   },
 ];
 
-function getConceptById(id) {
+function getConceptById(id: string): BackendConcept | undefined {
   return backendConcepts.find((c) => c.id === id);
 }
 
-function getConceptsByPhase(phase) {
+function getConceptsByPhase(phase: string) {
   return backendConcepts.filter((c) => c.phase === phase);
 }
 
