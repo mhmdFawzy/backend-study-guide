@@ -3,15 +3,14 @@ import {
   PHASES,
   backendConcepts,
   getConceptById,
-} from "./concepts.js?v=4";
+} from "./concepts.js?v=5";
 import {
   loadNotes,
   hasNote,
   renderNotesCard,
-  setupSyncPanel,
-  pullFromGist,
-  getSyncConfig,
-} from "./notes.js?v=4";
+  setupBackupPanel,
+  flushPendingNote,
+} from "./notes.js?v=5";
 
 const STORAGE_KEY = "backend-study-progress";
 
@@ -99,6 +98,7 @@ function renderNav() {
 
   nav.querySelectorAll(".nav-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
+      flushPendingNote();
       activeId = btn.dataset.id;
       quizAnswered = false;
       render();
@@ -357,6 +357,7 @@ document.getElementById("btn-complete").addEventListener("click", () => {
 });
 
 document.getElementById("btn-next").addEventListener("click", () => {
+  flushPendingNote();
   const i = backendConcepts.findIndex((c) => c.id === activeId);
   if (i < backendConcepts.length - 1) {
     activeId = backendConcepts[i + 1].id;
@@ -414,21 +415,9 @@ function setupMobileNav() {
 loadProgress();
 loadNotes();
 render();
-setupSyncPanel({ onRestore: () => {
+setupBackupPanel({ onRestore: () => {
   loadProgress();
   loadNotes();
   render();
 }});
 setupMobileNav();
-
-if (getSyncConfig()?.token && getSyncConfig()?.gistId) {
-  pullFromGist()
-    .then((pulled) => {
-      if (pulled) {
-        loadProgress();
-        loadNotes();
-        render();
-      }
-    })
-    .catch(() => {});
-}
