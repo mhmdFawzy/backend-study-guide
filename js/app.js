@@ -3,7 +3,7 @@ import {
   PHASES,
   backendConcepts,
   getConceptById,
-} from "./concepts.js";
+} from "./concepts.js?v=3";
 
 const STORAGE_KEY = "backend-study-progress";
 
