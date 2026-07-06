@@ -48,6 +48,53 @@ Content-Type: application/json
     playlistNote: "Video 2 in the playlist",
   },
   {
+    id: "servers",
+    title: "Servers",
+    phase: "Foundations",
+    summary:
+      "A server is a computer (physical or virtual) that runs your backend code 24/7 and responds to HTTP requests. When you call an API, a server receives the request, runs your handler, and sends back a response.",
+    frontendAnalogy:
+      "Like a restaurant that's always open — staff (your backend code) wait for orders (HTTP requests) even when no customers are there. Your React app is the customer placing orders.",
+    keyPoints: [
+      "Servers listen on a port (e.g. 3000, 8080) for incoming requests",
+      "Can be a single machine or many behind a load balancer",
+      "You pay for uptime — the server runs even when idle",
+      "Production servers need monitoring, updates, and security patches",
+    ],
+    example: {
+      title: "A minimal Node.js HTTP server",
+      language: "javascript",
+      code: `import http from 'http';
+
+const server = http.createServer((req, res) => {
+  if (req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'ok' }));
+    return;
+  }
+  res.writeHead(404);
+  res.end('Not found');
+});
+
+// Server stays running, waiting for requests
+server.listen(3000, () => {
+  console.log('Server listening on port 3000');
+});`,
+    },
+    quiz: {
+      question: "Why does a traditional server run 24/7?",
+      options: [
+        "Browsers require it",
+        "It must always be ready to accept incoming HTTP requests",
+        "Databases only work at night",
+        "It prevents caching",
+      ],
+      correctIndex: 1,
+      explanation:
+        "A server listens continuously so clients can connect anytime. Idle time still costs money because the process stays running.",
+    },
+  },
+  {
     id: "routing",
     title: "Routing",
     phase: "Foundations",
@@ -841,6 +888,47 @@ const users = await db.users.findAll({
       correctIndex: 2,
       explanation:
         "Webhooks push events instantly and avoid wasteful repeated polling requests.",
+    },
+  },
+  {
+    id: "serverless",
+    title: "Serverless",
+    phase: "Operations & Advanced",
+    summary:
+      "Serverless means you write small functions and a cloud provider runs them only when triggered — then shuts them down. You don't manage a server; you pay per invocation instead of 24/7 uptime.",
+    frontendAnalogy:
+      "Like a food truck that only opens when you call — no staff sitting idle. Your static site on GitHub Pages is free because there's no always-on server; a serverless function can handle tasks the browser can't do alone.",
+    keyPoints: [
+      "Functions run on demand (HTTP request, cron, file upload, etc.)",
+      "Auto-scales — provider spins up more instances under load",
+      "Cold starts: first request after idle may be slower",
+      "Good for: webhooks, image processing, API proxies — not long-running jobs",
+    ],
+    example: {
+      title: "Serverless vs always-on server",
+      language: "text",
+      code: `# Traditional server
+- Your Node app runs 24/7 on one machine
+- You pay for the machine even at 3 AM with zero traffic
+- You handle scaling, restarts, and OS updates
+
+# Serverless function (e.g. Vercel, AWS Lambda)
+- export default function handler(req) { return Response.json({ ok: true }); }
+- Runs only when someone hits the endpoint
+- Provider scales and manages infrastructure
+- You pay per request + compute time`,
+    },
+    quiz: {
+      question: "When is serverless a good fit?",
+      options: [
+        "Long-running background jobs that run for hours",
+        "Sporadic tasks like webhooks or API proxies with variable traffic",
+        "Apps that need a persistent WebSocket connection 24/7",
+        "When you want full control over the operating system",
+      ],
+      correctIndex: 1,
+      explanation:
+        "Serverless shines for event-driven, bursty workloads. Long-running processes and persistent connections are better on traditional servers.",
     },
   },
   {

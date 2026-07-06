@@ -242,14 +242,14 @@ a:hover { text-decoration: underline; }
 .nav-title { flex: 1; min-width: 0; }
 .nav-note { font-size: 0.75rem; flex-shrink: 0; opacity: 0.8; }
 
-.sync-card {
+.backup-card {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1rem;
   margin-bottom: 1rem;
 }
-.sync-header {
+.backup-header {
   display: flex;
   justify-content: space-between;
   gap: 0.5rem;
@@ -257,22 +257,10 @@ a:hover { text-decoration: underline; }
   font-weight: 500;
   margin-bottom: 0.5rem;
 }
-.sync-status { font-size: 0.7rem; color: var(--muted); text-align: right; }
-.sync-hint { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.75rem; line-height: 1.45; }
-.sync-hint a { color: var(--muted); text-decoration: underline; }
-.sync-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem; }
+.backup-status { font-size: 0.7rem; color: var(--muted); text-align: right; }
+.backup-hint { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.75rem; line-height: 1.45; }
+.backup-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .btn-sm { min-height: 2.25rem; padding: 0.35rem 0.65rem; font-size: 0.8rem; }
-.gist-sync { margin-top: 0.5rem; font-size: 0.8rem; }
-.gist-sync summary { cursor: pointer; font-weight: 500; margin-bottom: 0.5rem; }
-.sync-input {
-  width: 100%;
-  margin: 0.5rem 0 0.75rem;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 0.8rem;
-  font-family: var(--mono);
-}
 
 .notes-card { border-color: #c4b5fd; background: #faf5ff; }
 .notes-header {
