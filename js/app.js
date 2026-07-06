@@ -351,5 +351,52 @@ document.getElementById("btn-next").addEventListener("click", () => {
   }
 });
 
+function setupMobileNav() {
+  const toggle = document.getElementById("nav-toggle");
+  const sidebar = document.getElementById("sidebar");
+  const overlay = document.getElementById("sidebar-overlay");
+  const mq = window.matchMedia("(min-width: 900px)");
+
+  function setOpen(open) {
+    sidebar.classList.toggle("is-open", open);
+    overlay.classList.toggle("is-open", open);
+    overlay.hidden = !open;
+    toggle.setAttribute("aria-expanded", String(open));
+    toggle.setAttribute("aria-label", open ? "Close topics menu" : "Open topics menu");
+    document.body.style.overflow = open ? "hidden" : "";
+  }
+
+  function closeNav() {
+    if (!mq.matches) {
+      setOpen(false);
+    }
+  }
+
+  toggle.addEventListener("click", () => {
+    setOpen(!sidebar.classList.contains("is-open"));
+  });
+
+  overlay.addEventListener("click", closeNav);
+
+  mq.addEventListener("change", (e) => {
+    if (e.matches) {
+      setOpen(false);
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      closeNav();
+    }
+  });
+
+  document.getElementById("nav").addEventListener("click", (e) => {
+    if (e.target.closest(".nav-btn")) {
+      closeNav();
+    }
+  });
+}
+
 loadProgress();
 render();
+setupMobileNav();

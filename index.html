@@ -10,6 +10,11 @@
 <body>
   <header class="header">
     <div class="header-inner">
+      <button id="nav-toggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="sidebar" aria-label="Open topics menu">
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+      </button>
       <div class="brand">
         <div class="brand-icon">🎓</div>
         <div>
@@ -17,12 +22,14 @@
           <p class="subtitle">Based on <a href="https://www.youtube.com/playlist?list=PLui3EUkuMTPgZcV0QhQrOcwMPcBCcd_Q1" target="_blank" rel="noopener">Backend from First Principles</a></p>
         </div>
       </div>
-      <a class="btn btn-outline" href="https://www.youtube.com/playlist?list=PLui3EUkuMTPgZcV0QhQrOcwMPcBCcd_Q1" target="_blank" rel="noopener">▶ YouTube Playlist</a>
+      <a class="btn btn-outline header-playlist" href="https://www.youtube.com/playlist?list=PLui3EUkuMTPgZcV0QhQrOcwMPcBCcd_Q1" target="_blank" rel="noopener">▶ Playlist</a>
     </div>
   </header>
 
+  <div id="sidebar-overlay" class="sidebar-overlay" hidden></div>
+
   <div class="layout">
-    <aside class="sidebar">
+    <aside id="sidebar" class="sidebar">
       <div class="progress-card">
         <div class="progress-header">
           <span>Your progress</span>
