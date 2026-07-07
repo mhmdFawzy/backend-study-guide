@@ -317,6 +317,52 @@ function renderContent() {
       <p style="font-size:0.9rem">${esc(concept.frontendAnalogy)}</p>
     </div>
 
+    <div class="card sky">
+      <h3>⚙️ Backend perspective</h3>
+      <p style="font-size:0.9rem">${esc(concept.backendPerspective)}</p>
+    </div>
+
+    ${concept.comparison ? `
+    <div class="card comparison-card">
+      <h3>${esc(concept.comparison.title)}</h3>
+      <p class="comparison-intro">${esc(concept.comparison.intro)}</p>
+      <div class="comparison-table-wrap">
+        <table class="comparison-table">
+          <thead>
+            <tr>
+              <th scope="col">Aspect</th>
+              <th scope="col">Sessions</th>
+              <th scope="col">JWT</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${concept.comparison.rows.map((row) => `
+              <tr>
+                <th scope="row">${esc(row.aspect)}</th>
+                <td>${esc(row.session)}</td>
+                <td>${esc(row.jwt)}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+      ${concept.comparison.takeaway ? `<p class="comparison-takeaway">${esc(concept.comparison.takeaway)}</p>` : ""}
+    </div>` : ""}
+
+    ${concept.authMechanisms ? `
+    <div class="card auth-mechanisms-card">
+      <h3>${esc(concept.authMechanisms.title)}</h3>
+      <p class="auth-mechanisms-intro">${esc(concept.authMechanisms.intro)}</p>
+      <div class="auth-mechanisms-list">
+        ${concept.authMechanisms.items.map((item) => `
+          <div class="auth-mechanism-item">
+            <h4 class="auth-mechanism-name">${esc(item.name)}</h4>
+            <p class="auth-mechanism-desc">${esc(item.description)}</p>
+          </div>
+        `).join("")}
+      </div>
+    </div>` : ""}
+
     <h3 style="font-weight:600;margin-bottom:0.75rem">Key points</h3>
     <ul class="key-points">
       ${concept.keyPoints.map((p) => `<li>${esc(p)}</li>`).join("")}
