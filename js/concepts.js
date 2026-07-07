@@ -268,70 +268,246 @@ app.post('/api/users', (req, res) => {
     title: "Authentication & Authorization",
     phase: "Security & Pipeline",
     summary:
-      "Authentication (authn) verifies WHO you are (login). Authorization (authz) verifies WHAT you're allowed to do (permissions). They are different steps.",
+      "Authentication (authn) verifies WHO you are — logging in with a password, Google, or a magic link. Authorization (authz) verifies WHAT you're allowed to do — admin vs viewer, read vs write. They are separate steps: you can be authenticated (logged in) without being authorized (allowed to access a resource). Most backends implement authn with sessions, JWTs, or OAuth; authz runs after authn succeeds.",
     frontendAnalogy:
-      "Logging in with Google OAuth is authentication. Checking if you can access the admin dashboard is authorization — your app already does both on the frontend; the backend must enforce authz again.",
+      "Logging in with Google OAuth is authentication — the provider proves who you are. Hiding the admin dashboard link unless `user.role === 'admin'` is authorization. Your React app may do both for UX, but the backend must re-verify every request because anyone can call your API directly with curl or Postman.",
     backendPerspective:
-      "You implement login endpoints that verify credentials (password hash comparison) and issue JWTs or set session cookies. Auth middleware runs on protected routes, verifies the token on every request, and attaches the user to `req.user` or request context. Authorization checks ('can this user delete this post?') happen in services or dedicated guards after authentication succeeds.",
+      "You implement a login endpoint that verifies credentials and issues either a session cookie or a signed JWT. Auth middleware on protected routes validates the session or token on every request and attaches the user to `req.user` or request context. Authorization checks ('does this user own this order?', 'is this user an admin?') happen in services or route guards after authentication — never trust role flags sent from the client alone.",
     keyPoints: [
-      "Never trust the frontend — always verify tokens on the server",
-      "JWT (JSON Web Token): stateless token with encoded user info + cryptographic signature",
-      "Sessions: server stores login state; client holds a session cookie",
-      "OAuth lets users log in via Google/GitHub without giving your app their password",
+      "Authn vs authz — authentication proves identity (login); authorization checks permissions (can this user do X?). A valid login does not mean the user can access every endpoint.",
+      "Never trust the frontend — tokens, cookies, and role claims must be verified server-side on every protected request. Client-side route guards are for UX only.",
+      "Sessions store login state on the server; the client holds only an opaque session ID in an HttpOnly cookie. JWTs embed user claims in a signed token the client stores and sends on each request — the server verifies the signature without a database lookup.",
+      "OAuth 2.0 / OpenID Connect — users log in via Google, GitHub, or an enterprise IdP; your app receives tokens without ever seeing the user's password. Common for 'Sign in with Google' and SSO.",
+      "API keys — long-lived secrets for server-to-server or developer access. Simpler than OAuth but harder to rotate; never expose them in frontend code or git repos.",
+      "Refresh tokens — long-lived tokens used only to obtain new short-lived access tokens (JWT). Keeps access tokens short (minutes) while users stay logged in for days without re-entering credentials.",
     ],
+    comparison: {
+      title: "Sessions vs JWT — complete comparison",
+      intro:
+        "Both prove the user is logged in, but they store and verify identity very differently. Sessions are stateful (server remembers you); JWTs are stateless (server verifies a signed token without storing session data). Choose based on your app type, scaling needs, and security requirements.",
+      rows: [
+        {
+          aspect: "Where state lives",
+          session:
+            "On the server — in memory, Redis, or a database. The client only holds an opaque session ID (random string) in a cookie.",
+          jwt:
+            "In the token itself — user ID, roles, and expiry are encoded in the JWT payload. The server verifies the cryptographic signature without looking up session state.",
+        },
+        {
+          aspect: "What the client stores",
+          session:
+            "A session cookie (e.g. `connect.sid=abc123`) — typically HttpOnly, so JavaScript cannot read it. The cookie is meaningless without the server-side session record.",
+          jwt:
+            "The full token — in `localStorage`, `sessionStorage`, or memory (SPA), or sent as a Bearer token in the `Authorization` header. The token contains readable (but signed) claims.",
+        },
+        {
+          aspect: "How each request is verified",
+          session:
+            "Server reads the session ID from the cookie, looks up the session store (Redis/DB), and loads the user. Every request requires a store lookup unless you cache sessions in memory.",
+          jwt:
+            "Server reads the token from the `Authorization: Bearer <token>` header, verifies the signature with a secret/public key, and trusts the payload if valid. No database lookup needed for basic authn.",
+        },
+        {
+          aspect: "Logout & revocation",
+          session:
+            "Easy — delete the session from the store and clear the cookie. The user is logged out immediately on all devices if you invalidate that session ID.",
+          jwt:
+            "Hard — JWTs are valid until they expire; there is no server-side record to delete. You need a token blocklist (Redis), short expiry + refresh tokens, or accept that logout only works client-side until expiry.",
+        },
+        {
+          aspect: "Horizontal scaling",
+          session:
+            "Requires a shared session store (Redis) when running multiple server instances — otherwise user hits server A, next request goes to server B which has no session. Sticky sessions are a fragile alternative.",
+          jwt:
+            "Scales easily — any server instance can verify the JWT with the same secret or public key. No shared session store needed, which is why JWTs are popular in microservices.",
+        },
+        {
+          aspect: "XSS risk (cross-site scripting)",
+          session:
+            "Lower if using HttpOnly cookies — JavaScript cannot read the session ID, so stolen XSS cannot easily exfiltrate it. Still vulnerable if attacker can make requests from the victim's browser (browser sends cookie automatically).",
+          jwt:
+            "Higher if stored in localStorage — any XSS script can read `localStorage.getItem('token')` and send it to an attacker. Mitigate with short expiry, or store in memory only (lost on tab close).",
+        },
+        {
+          aspect: "CSRF risk (cross-site request forgery)",
+          session:
+            "Higher — browsers automatically send cookies on every request to your domain, including forged requests from malicious sites. Mitigate with SameSite cookies, CSRF tokens, or double-submit cookies.",
+          jwt:
+            "Lower for Bearer tokens — browsers do not auto-attach `Authorization` headers; your JavaScript must add them. CSRF against API-only JWT auth is much less common than with cookie sessions.",
+        },
+        {
+          aspect: "Token / cookie size",
+          session:
+            "Tiny cookie — just a session ID (32–64 bytes). User data stays on the server; you can store large permission sets without bloating every request.",
+          jwt:
+            "Larger — the full payload is sent on every request. Putting too many claims (roles, permissions, metadata) in the JWT increases header size and can hit HTTP limits. Keep JWTs lean.",
+        },
+        {
+          aspect: "Best fit",
+          session:
+            "Traditional server-rendered apps (Rails, Laravel, Django), same-domain frontends, when you need instant logout/revocation, or when storing lots of server-side session data.",
+          jwt:
+            "SPAs and mobile apps on different domains, microservices, APIs consumed by multiple clients, and when you need stateless scaling without a shared session store.",
+        },
+      ],
+      takeaway:
+        "Many production apps combine both: HttpOnly session cookie for web + JWT for mobile API, or short-lived JWT access tokens with refresh tokens stored in HttpOnly cookies. There is no universal winner — match the mechanism to your client type and revocation needs.",
+    },
+    authMechanisms: {
+      title: "Auth mechanisms in general",
+      intro:
+        "Beyond sessions and JWTs, backends use several patterns to prove identity and grant access. Most real apps combine multiple mechanisms — for example OAuth for login plus JWT for API calls plus API keys for webhooks.",
+      items: [
+        {
+          name: "Password / credentials",
+          description:
+            "The user sends email + password to your login endpoint; you compare against a bcrypt/argon2 hash stored in the database. Still the foundation of most auth — even OAuth users often have a password option. Never store plain-text passwords; always hash with a slow algorithm and rate-limit login attempts.",
+        },
+        {
+          name: "Session cookies",
+          description:
+            "After successful login, the server creates a session record and sets an HttpOnly, Secure, SameSite cookie containing the session ID. On each request the server looks up the session and loads the user. Standard for traditional web apps; pairs well with server-rendered HTML and same-site frontends.",
+        },
+        {
+          name: "JWT (JSON Web Token)",
+          description:
+            "A signed, base64-encoded string with three parts: header, payload (claims like `userId`, `role`, `exp`), and signature. The server signs with a secret (HS256) or private key (RS256); clients send it as `Authorization: Bearer <token>`. Stateless and portable — ideal for SPAs, mobile apps, and service-to-service calls.",
+        },
+        {
+          name: "OAuth 2.0 & OpenID Connect (OIDC)",
+          description:
+            "A protocol for delegated auth — 'Log in with Google'. The user authenticates with the provider (Google, GitHub, Okta); your app receives an authorization code or tokens without handling the password. OIDC adds a standard identity layer on top of OAuth, returning an `id_token` with user profile info. Use libraries (Passport.js, NextAuth) — do not implement the flow from scratch.",
+        },
+        {
+          name: "Refresh tokens",
+          description:
+            "Long-lived tokens (days/weeks) used only to call a `/auth/refresh` endpoint and get a new short-lived access token. Access tokens expire in minutes, limiting damage if stolen. Store refresh tokens in HttpOnly cookies or secure device storage; rotate them on each use to detect theft.",
+        },
+        {
+          name: "API keys",
+          description:
+            "Static secrets (e.g. `sk_live_abc123`) sent in a header (`X-API-Key`) or query param for machine-to-machine access. Common for public APIs, webhooks, and internal services. Easy to implement but hard to scope and rotate — prefer OAuth client credentials for production service auth when possible.",
+        },
+        {
+          name: "Magic links / passwordless",
+          description:
+            "User enters email; server sends a one-time link with a signed token. Clicking the link logs them in without a password. Good UX for low-friction signup; tokens must be single-use, short-lived, and invalidated after use. Implemented as a special short-lived JWT or one-time session token.",
+        },
+        {
+          name: "Multi-factor authentication (MFA)",
+          description:
+            "Requires a second factor after password — TOTP app (Google Authenticator), SMS code, or hardware key (WebAuthn/FIDO2). Not a separate auth mechanism but a layer on top of credentials or OAuth. Backend stores MFA secrets encrypted and verifies TOTP codes or WebAuthn assertions at login.",
+        },
+      ],
+    },
     terminology: [
       {
         term: "Authentication (authn)",
-        definition: "Proves who you are — login with password, Google, etc.",
+        definition:
+          "Proves who you are — verifying identity through passwords, OAuth, magic links, or API keys. The output is a confirmed user identity (user ID, email) attached to the request. Happens at login and on every subsequent protected request.",
       },
       {
         term: "Authorization (authz)",
-        definition: "Checks what you're allowed to do — admin vs viewer, read vs write.",
-      },
-      {
-        term: "JWT",
-        definition: "JSON Web Token — a signed string the client sends on each request; server verifies without storing session state.",
-      },
-      {
-        term: "OAuth",
-        definition: "Protocol for 'Log in with Google' — user authenticates with a provider, your app gets a token.",
+        definition:
+          "Checks what an authenticated user is allowed to do — admin vs viewer, owner vs stranger, read vs write. Runs after authn succeeds. Examples: 'can this user delete post 42?', 'does this API key have write scope?'",
       },
       {
         term: "Session",
-        definition: "Server-side login state keyed by a cookie. Opposite of stateless JWT.",
+        definition:
+          "Server-side login state keyed by an opaque ID stored in an HttpOnly cookie. The server looks up the session on each request to load the user. Stateful — requires a shared store (Redis) when scaling horizontally. Easy to revoke instantly by deleting the session.",
+      },
+      {
+        term: "JWT (JSON Web Token)",
+        definition:
+          "A self-contained signed token with encoded claims (user ID, roles, expiry). The server verifies the signature without a database lookup. Stateless — scales across instances easily. Hard to revoke before expiry without a blocklist or short TTL + refresh tokens.",
+      },
+      {
+        term: "OAuth 2.0",
+        definition:
+          "Authorization framework for delegated access — users log in via a provider (Google, GitHub) and your app receives tokens. Your app never sees the user's password. Distinct from OIDC, which adds standardized identity (`id_token`) on top.",
+      },
+      {
+        term: "Refresh token",
+        definition:
+          "A long-lived token used only to obtain new access tokens without re-login. Stored securely (HttpOnly cookie or device keychain). Rotated on each refresh to detect theft. Keeps access tokens short-lived for security.",
+      },
+      {
+        term: "Bearer token",
+        definition:
+          "A token sent in the `Authorization: Bearer <token>` header. The word 'Bearer' means whoever holds the token is granted access — treat it like a password. JWTs and OAuth access tokens are commonly sent as Bearer tokens.",
+      },
+      {
+        term: "HttpOnly cookie",
+        definition:
+          "A cookie flag that prevents JavaScript from reading it — mitigates XSS token theft. Essential for session cookies. Combine with `Secure` (HTTPS only) and `SameSite` (CSRF mitigation) flags in production.",
       },
     ],
     example: {
-      title: "JWT flow (simplified)",
+      title: "Session flow vs JWT flow",
       language: "typescript",
-      code: `// 1. User logs in
-POST /auth/login  { email, password }
-→ Server checks password hash
-→ Returns: { token: "eyJhbGci..." }
+      code: `// ─── SESSION FLOW ───────────────────────────────────────────
+// 1. Login — server creates session, sets cookie
+app.post('/auth/login', async (req, res) => {
+  const user = await verifyPassword(req.body.email, req.body.password);
+  const sessionId = await sessionStore.create({ userId: user.id });
+  res.cookie('sid', sessionId, {
+    httpOnly: true, secure: true, sameSite: 'lax', maxAge: 86400000,
+  });
+  res.json({ user: { id: user.id, name: user.name } });
+});
 
-// 2. Frontend stores token, sends on every request
-GET /api/admin/users
-Authorization: Bearer eyJhbGci...
-
-// 3. Backend middleware verifies token
-function authMiddleware(req, res, next) {
-  const token = req.headers.authorization?.split(' ')[1];
-  const user = verifyJwt(token); // throws if invalid
-  req.user = user;
+// 2. Protected route — lookup session on every request
+function sessionAuth(req, res, next) {
+  const session = await sessionStore.get(req.cookies.sid);
+  if (!session) return res.status(401).json({ error: 'Not logged in' });
+  req.user = await userService.findById(session.userId);
   next();
-}`,
+}
+
+// 3. Logout — delete session server-side (instant revocation)
+app.post('/auth/logout', async (req, res) => {
+  await sessionStore.delete(req.cookies.sid);
+  res.clearCookie('sid');
+  res.json({ ok: true });
+});
+
+// ─── JWT FLOW ───────────────────────────────────────────────
+// 1. Login — server signs and returns token
+app.post('/auth/login', async (req, res) => {
+  const user = await verifyPassword(req.body.email, req.body.password);
+  const token = jwt.sign(
+    { sub: user.id, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: '15m' }
+  );
+  res.json({ accessToken: token });
+});
+
+// 2. Protected route — verify signature, no DB lookup
+function jwtAuth(req, res, next) {
+  const token = req.headers.authorization?.split(' ')[1];
+  try {
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    next();
+  } catch {
+    res.status(401).json({ error: 'Invalid or expired token' });
+  }
+}
+
+// 3. Logout — client deletes token; server cannot revoke until expiry
+//    (unless you maintain a token blocklist in Redis)`,
     },
     quiz: {
-      question: "Checking if a user is an admin is...",
+      question: "You need instant logout across all devices and run 3 server instances. Which approach fits best?",
       options: [
-        "Authentication",
-        "Authorization",
-        "Serialization",
-        "Routing",
+        "JWT in localStorage with 7-day expiry",
+        "Sessions stored in Redis with HttpOnly cookies",
+        "API keys in the Authorization header",
+        "No auth — use IP address instead",
       ],
       correctIndex: 1,
       explanation:
-        "Authentication proves identity. Authorization checks permissions (e.g. admin role).",
+        "Sessions in Redis give instant revocation (delete session = logged out) and work across multiple servers via a shared store. JWTs in localStorage cannot be revoked until expiry without a blocklist.",
     },
   },
   {

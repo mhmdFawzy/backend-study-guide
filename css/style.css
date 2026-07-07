@@ -441,6 +441,85 @@ a:hover { text-decoration: underline; }
   }
 }
 
+.comparison-card {
+  border-color: #c7d2fe;
+  background: #eef2ff;
+}
+.comparison-intro,
+.comparison-takeaway,
+.auth-mechanisms-intro {
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.55;
+  margin-bottom: 1rem;
+}
+.comparison-takeaway {
+  margin-bottom: 0;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #c7d2fe;
+  font-weight: 500;
+  color: var(--text);
+}
+.comparison-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.comparison-table th,
+.comparison-table td {
+  padding: 0.75rem;
+  border: 1px solid #c7d2fe;
+  vertical-align: top;
+  text-align: left;
+}
+.comparison-table thead th {
+  background: #e0e7ff;
+  font-weight: 600;
+}
+.comparison-table tbody th[scope="row"] {
+  background: #f5f7ff;
+  font-weight: 600;
+  white-space: nowrap;
+  width: 1%;
+}
+.comparison-table td {
+  background: #fff;
+  color: var(--muted);
+}
+
+.auth-mechanisms-card {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+.auth-mechanisms-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.auth-mechanism-item {
+  padding: 0.875rem 1rem;
+  background: #fff;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+}
+.auth-mechanism-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+.auth-mechanism-desc {
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.55;
+  margin: 0;
+}
+
 .key-points { list-style: none; margin-bottom: 1.25rem; }
 .key-points li {
   display: flex; gap: 0.5rem; font-size: 0.9rem;
