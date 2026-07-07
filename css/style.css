@@ -13,6 +13,8 @@
   --green-bg: #f0fdf4;
   --amber: #d97706;
   --amber-bg: #fffbeb;
+  --sky: #0284c7;
+  --sky-bg: #f0f9ff;
   --red: #dc2626;
   --red-bg: #fef2f2;
   --radius: 12px;
@@ -381,6 +383,7 @@ a:hover { text-decoration: underline; }
   margin-bottom: 1.25rem;
 }
 .card.amber { border-color: #fde68a; background: var(--amber-bg); }
+.card.sky { border-color: #bae6fd; background: var(--sky-bg); }
 .card.dashed { border-style: dashed; }
 .card h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.75rem; }
 

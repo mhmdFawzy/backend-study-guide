@@ -483,41 +483,88 @@ function getOrders(req, res) {
   },
   {
     id: "handlers",
-    title: "Handlers, Controllers & Services",
+    title: "MVC, Controllers & Services",
     phase: "Application Layer",
     summary:
-      "Handlers/controllers handle HTTP (parse request, send response). Services contain business logic. This separation keeps HTTP concerns separate from domain logic.",
+      "MVC (Model–View–Controller) is a classic pattern for organizing backend code: the Model holds data and persistence, the View formats output, and the Controller receives HTTP requests and coordinates the work. In modern APIs the View is usually JSON rather than HTML, but the separation of concerns stays the same. Controllers stay thin — they parse input, call services, and send responses — while services own the real business logic.",
     frontendAnalogy:
-      "Controller = your page component (handles UI events). Service = custom hook or API utility (business logic). Keep pages thin, logic in hooks.",
+      "On the frontend, a page component acts like a controller: it handles user events (clicks, form submits) and decides what to render. A custom hook or API utility acts like a service — it fetches data, applies business rules, and returns results the UI can display. Just as you keep React components thin and push logic into hooks, backend controllers should delegate to services instead of doing calculations inline.",
+    backendPerspective:
+      "As a backend engineer, you register routes that map HTTP method + path to a controller function. The controller reads `req.params`, `req.query`, and `req.body`, validates that the request is well-formed, then calls one or more service methods. It never talks to the database directly — that belongs in the Model layer (repositories or ORM models). The controller's only output job is picking the right status code and serializing the result to JSON.",
     keyPoints: [
-      "Controller: thin — parse input, call service, format response",
-      "Service: fat — business rules, calculations, orchestration",
-      "Same service can be used by REST API, CLI, or background jobs",
-      "MVC: Model (data), View (response), Controller (HTTP layer)",
+      "Model — represents your data and how it is stored. In practice this means database tables, ORM entities (Prisma, TypeORM), or repository classes that run queries. The model knows how to find, save, and update records but should not contain HTTP or routing logic.",
+      "View — the formatted output sent back to the client. For REST APIs the view is almost always JSON (`res.json(user)`), not an HTML template. Your controller decides what shape the response takes: which fields to include, what status code to use, and whether to wrap errors in a consistent envelope.",
+      "Controller — the HTTP entry point for a route. It extracts and validates input from the request, calls the appropriate service, maps service results or errors to HTTP responses, and returns. A good controller has no `if (balance < total)` business rules — only `try/catch` and status-code mapping.",
+      "Service — the business logic layer between controllers and the database. Services enforce rules (pricing, permissions, workflows), orchestrate multiple models, and can be reused by REST handlers, CLI commands, background jobs, and webhooks. This is where 'check if user has enough balance' belongs.",
+      "Handler vs controller — these terms are often used interchangeably in Node/Express. Technically a handler is any function that processes a request; a controller is a named group of related handlers (e.g. `UserController.create`, `UserController.list`). Frameworks like NestJS and Rails make this distinction explicit with decorator-based controller classes.",
+      "Thin controller, fat service — a widely followed rule. If your controller grows beyond ~15 lines, you are probably mixing HTTP concerns with business logic. Move calculations, validations beyond syntax, and database calls into services so they can be unit-tested without mocking HTTP objects.",
+    ],
+    terminology: [
+      {
+        term: "MVC (Model–View–Controller)",
+        definition:
+          "An architectural pattern that splits an application into three roles. The Model manages data, the View presents it, and the Controller handles user input and coordinates between them. On the backend, MVC keeps HTTP plumbing separate from business rules and database access.",
+      },
+      {
+        term: "Model",
+        definition:
+          "The data layer — database schemas, ORM models, and repository classes. Models know how to read and write records (e.g. `User.findById(42)`) but should not decide HTTP status codes or parse request bodies. In a layered API, services call models; controllers never call models directly.",
+      },
+      {
+        term: "View",
+        definition:
+          "The presentation layer — what the client receives. In a JSON API, the view is the response body and headers your controller sends (`res.status(201).json({ id, name })`). In server-rendered apps (Rails, Laravel), the view can be an HTML template instead.",
+      },
+      {
+        term: "Controller",
+        definition:
+          "A function or class method bound to a route that handles one HTTP action. It reads the request, delegates to services, and writes the response. Controllers are intentionally thin: they translate between HTTP and your domain, not implement domain rules themselves.",
+      },
+      {
+        term: "Handler",
+        definition:
+          "Any function that runs when a request matches a route — often synonymous with controller in Express and Fastify. In larger apps, 'handler' may refer to a single route function while 'controller' refers to the file or class grouping several handlers (list, create, update, delete).",
+      },
+      {
+        term: "Service",
+        definition:
+          "A class or module containing business logic independent of HTTP. Services accept plain data (user ID, cart items) and return results or throw domain errors. Because they have no `req`/`res` dependency, the same service can power an API endpoint, a cron job, or a test without changes.",
+      },
     ],
     example: {
-      title: "Thin controller, fat service",
+      title: "MVC flow: route → controller → service → model",
       language: "typescript",
-      code: `// Controller — only HTTP concerns
-async function createOrder(req, res) {
-  try {
-    const order = await orderService.create(req.context.user.id, req.body);
-    res.status(201).json(order);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+      code: `// Route — maps HTTP to controller method
+router.post('/api/orders', authMiddleware, orderController.create);
+
+// Controller — HTTP only (thin)
+class OrderController {
+  async create(req, res) {
+    try {
+      const order = await orderService.create(req.context.user.id, req.body);
+      res.status(201).json(order);           // View = JSON response
+    } catch (err) {
+      const status = err.code === 'INSUFFICIENT_FUNDS' ? 402 : 400;
+      res.status(status).json({ error: err.message });
+    }
   }
 }
 
-// Service — business logic
+// Service — business logic (fat)
 class OrderService {
   async create(userId: string, items: CartItem[]) {
     if (items.length === 0) throw new Error('Cart is empty');
     const total = this.calculateTotal(items);
     if (total > await walletService.getBalance(userId)) {
-      throw new Error('Insufficient funds');
+      throw Object.assign(new Error('Insufficient funds'), { code: 'INSUFFICIENT_FUNDS' });
     }
-    return db.orders.insert({ userId, items, total });
+    return orderRepository.save({ userId, items, total }); // Model layer
   }
+}
+
+// Model / Repository — data access only
+class OrderRepository {
+  save(data) { return db.orders.insert(data); }
 }`,
     },
     quiz: {
