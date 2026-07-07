@@ -317,11 +317,10 @@ function renderContent() {
       <p style="font-size:0.9rem">${esc(concept.frontendAnalogy)}</p>
     </div>
 
-    ${concept.backendPerspective ? `
     <div class="card sky">
       <h3>⚙️ Backend perspective</h3>
       <p style="font-size:0.9rem">${esc(concept.backendPerspective)}</p>
-    </div>` : ""}
+    </div>
 
     <h3 style="font-weight:600;margin-bottom:0.75rem">Key points</h3>
     <ul class="key-points">
