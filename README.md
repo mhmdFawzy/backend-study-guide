@@ -9,6 +9,7 @@ Based on the [Backend from First Principles](https://www.youtube.com/playlist?li
 ## What's inside
 
 - 54 backend concepts with frontend-friendly explanations (including a full Node.js section)
+- Runnable Node.js course examples in `examples/nodejs/`
 - Code examples for every topic
 - Interactive HTTP request builder
 - Middleware pipeline visualizer
@@ -38,6 +39,16 @@ python3 -m http.server 8080
 
 # Option 2: npx
 npx serve .
+```
+
+### Run Node.js examples
+
+Course companion files live in `examples/nodejs/`. Run any file with `tsx` or `ts-node`:
+
+```bash
+npm install -g tsx
+tsx examples/nodejs/01-basic-http-server.ts
+tsx examples/nodejs/02-routing.ts
 ```
 
 ## Deploy to GitHub Pages (free) — one command

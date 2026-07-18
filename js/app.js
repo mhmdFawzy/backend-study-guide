@@ -3,14 +3,14 @@ import {
   PHASES,
   backendConcepts,
   getConceptById,
-} from "./concepts.js?v=8";
+} from "./concepts.js?v=9";
 import {
   loadNotes,
   hasNote,
   renderNotesCard,
   setupBackupPanel,
   flushPendingNote,
-} from "./notes.js?v=8";
+} from "./notes.js?v=9";
 
 const STORAGE_KEY = "backend-study-progress";
 
@@ -370,6 +370,7 @@ function renderContent() {
 
     <div class="card">
       <h3>${esc(concept.example.title)}</h3>
+      ${concept.example.ref ? `<p class="example-ref">📁 Runnable: <code>${esc(concept.example.ref)}</code></p>` : ""}
       <pre><code>${esc(concept.example.code)}</code></pre>
     </div>
 

@@ -143,28 +143,30 @@ npm run dev          # start dev server`,
       "`NODE_ENV` — convention: `development`, `production`, `test`; toggles logging and error detail.",
     ],
     example: {
-      title: "Reading config from process.env",
+      title: "process.env, argv, and exit codes",
+      ref: "examples/nodejs/01-process-object.ts",
       language: "typescript",
-      code: `// .env (never commit!) → loaded by dotenv at startup
-// PORT=3000
-// DATABASE_URL=postgres://...
-// JWT_SECRET=super-secret
+      code: `import process from 'node:process';
 
-const config = {
-  port: Number(process.env.PORT) || 3000,
-  dbUrl: process.env.DATABASE_URL!,
-  jwtSecret: process.env.JWT_SECRET!,
-  isProd: process.env.NODE_ENV === 'production',
-};
+// process.env — always string or undefined
+const port = Number(process.env.PORT ?? 3000);
+const nodeEnv = process.env.NODE_ENV ?? 'development';
 
-// CLI args: node script.js --user=42
-const args = process.argv.slice(2);
+// process.argv → [nodePath, scriptPath, ...yourArgs]
+// node src/01-process-object.ts start --fail
+const command = process.argv[2] ?? 'start';
+const shouldFail = process.argv.includes('--fail');
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('Shutting down...');
-  server.close(() => process.exit(0));
-});`,
+process.on('exit', (code) => {
+  console.log(\`Process finished with exit code \${code}\`);
+});
+
+if (shouldFail) {
+  console.error('Manual failure triggered with --fail flag');
+  process.exit(1); // non-zero = error
+}
+
+console.log({ command, port, nodeEnv });`,
     },
     quiz: {
       question: "Where should JWT_SECRET be read from in a Node backend?",
@@ -209,23 +211,28 @@ process.on('SIGTERM', () => {
       },
     ],
     example: {
-      title: "path and crypto in practice",
+      title: "crypto, path, and os modules",
+      ref: "examples/nodejs/02-crypto-module.ts, 03-os-module.ts, 04-path-module.ts",
       language: "typescript",
-      code: `import path from 'node:path';
-import crypto from 'node:crypto';
-import { fileURLToPath } from 'node:url';
+      code: `import crypto from 'node:crypto';
+import path from 'node:path';
+import * as os from 'node:os';
 
-// ESM equivalent of __dirname
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// crypto — UUIDs, tokens, hashing, HMAC signatures
+const requestId = crypto.randomUUID();
+const resetToken = crypto.randomBytes(16).toString('hex');
+const hash = crypto.createHash('sha256').update('hello node').digest('hex');
 
-const uploadPath = path.join(__dirname, '..', 'uploads', 'avatar.jpg');
-// → /app/uploads/avatar.jpg (OS-correct separators)
+const signature = crypto.createHmac('sha256', 'my-secret')
+  .update('user_id=1').digest('hex');
 
-// Secure random token for password reset link
-const resetToken = crypto.randomBytes(32).toString('hex');
+// path — OS-safe file paths (does NOT create folders or check existence)
+const uploadPath = path.join(process.cwd(), 'uploads', 'users', '42', 'avatar.png');
+const fileName = path.basename(uploadPath);  // avatar.png
+const fileExt = path.extname(uploadPath);    // .png
 
-// SHA-256 checksum (NOT for passwords — use bcrypt for those)
-const hash = crypto.createHash('sha256').update('file-contents').digest('hex');`,
+// os — system info (useful for cluster sizing)
+console.log(os.platform(), os.arch(), os.cpus().length, 'CPU cores');`,
     },
     quiz: {
       question: "Why use path.join() instead of string concatenation for file paths?",
@@ -258,31 +265,33 @@ const hash = crypto.createHash('sha256').update('file-contents').digest('hex');`
       "Don't use setInterval for critical jobs — use cron or BullMQ for reliability and persistence.",
     ],
     example: {
-      title: "Timer patterns in Node",
+      title: "setTimeout, setInterval, setImmediate",
+      ref: "examples/nodejs/05-timers-module.ts",
       language: "typescript",
-      code: `// One-time delay — retry logic
-function retry(fn, attempts = 3, delay = 1000) {
-  return fn().catch((err) => {
-    if (attempts <= 1) throw err;
-    return new Promise((resolve) =>
-      setTimeout(() => resolve(retry(fn, attempts - 1, delay * 2)), delay)
-    );
-  });
-}
+      code: `import { setTimeout as sleep } from 'node:timers/promises';
 
-// Debounce (simplified)
-let debounceTimer: ReturnType<typeof setTimeout>;
-function debounce(fn: () => void, ms: number) {
-  clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(fn, ms);
-}
+// setTimeout — runs once after delay
+setTimeout(() => console.log('runs after 1 second'), 1000);
+console.log('runs immediately — Node does not wait');
 
-// setImmediate — defer without blocking current code
-setImmediate(() => console.log('runs after current sync code'));
+// clearTimeout — cancel before it fires
+const timerId = setTimeout(() => console.log('never runs'), 2000);
+clearTimeout(timerId);
 
-// Cleanup on shutdown
-const poll = setInterval(checkHealth, 30_000);
-process.on('SIGTERM', () => clearInterval(poll));`,
+// setInterval — repeats until cleared
+let count = 0;
+const intervalId = setInterval(() => {
+  count++;
+  console.log(\`tick: \${count}\`);
+  if (count === 3) clearInterval(intervalId);
+}, 1000);
+
+// setImmediate — runs on next event loop iteration
+setImmediate(() => console.log('setImmediate callback'));
+
+// Promise-based sleep (preferred in async code)
+await sleep(1500);
+console.log('woke up after 1.5 seconds');`,
     },
     quiz: {
       question: "What's the difference between setImmediate and setTimeout(fn, 0)?",
@@ -327,38 +336,46 @@ process.on('SIGTERM', () => clearInterval(poll));`,
       },
     ],
     example: {
-      title: "Callback → Promise → async/await evolution",
+      title: "Callback → Promise → async/await",
+      ref: "examples/nodejs/06-callback-promises-async-await.ts",
       language: "typescript",
-      code: `import { readFile } from 'node:fs/promises';
-
-// ❌ Callback style (legacy)
-import { readFile as readCb } from 'node:fs';
-readCb('config.json', 'utf8', (err, data) => {
-  if (err) { console.error(err); return; }
-  console.log(JSON.parse(data));
-});
-
-// ✅ Promise style
-readFile('config.json', 'utf8')
-  .then((data) => console.log(JSON.parse(data)))
-  .catch(console.error);
-
-// ✅ async/await (preferred)
-async function loadConfig() {
-  try {
-    const data = await readFile('config.json', 'utf8');
-    return JSON.parse(data);
-  } catch (err) {
-    console.error('Failed to load config:', err);
-    throw err;
-  }
+      code: `// Error-first callback — classic Node pattern
+function findUserWithCallback(
+  userId: number,
+  callback: (error: Error | null, user?: User) => void,
+): void {
+  setTimeout(() => {
+    const user = users.find((u) => u.id === userId);
+    if (!user) {
+      callback(new Error(\`user \${userId} not found\`));
+      return;
+    }
+    callback(null, user);
+  }, 500);
 }
 
-// Concurrent I/O
-const [users, orders] = await Promise.all([
-  userService.findAll(),
-  orderService.findAll(),
-]);`,
+// Promise wrapper
+function findUserWithPromise(userId: number): Promise<User> {
+  return new Promise((resolve, reject) => {
+    findUserWithCallback(userId, (err, user) => {
+      if (err) reject(err);
+      else resolve(user!);
+    });
+  });
+}
+
+// async/await — preferred in modern Node
+async function findUser(userId: number): Promise<User> {
+  try {
+    const user = await findUserWithPromise(userId);
+    console.log('found:', user.name);
+    return user;
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'unknown error';
+    console.error(msg);
+    throw error;
+  }
+}`,
     },
     quiz: {
       question: "In Node's error-first callback `(err, data) => {}`, what should you check first?",
@@ -391,30 +408,28 @@ const [users, orders] = await Promise.all([
       "Streams for large files — don't `readFile` a 500MB upload; pipe a stream instead.",
     ],
     example: {
-      title: "fs/promises — read, write, check existence",
+      title: "Sync, callback, and Promise fs APIs",
+      ref: "examples/nodejs/07-fs-module.ts",
       language: "typescript",
-      code: `import { readFile, writeFile, access, mkdir } from 'node:fs/promises';
-import { constants } from 'node:fs';
+      code: `import fs from 'node:fs';
+import fsPromises from 'node:fs/promises';
 
-// Read JSON config
-const config = JSON.parse(await readFile('config.json', 'utf8'));
+// ✅ Sync — OK for startup scripts / CLI only (blocks event loop!)
+fs.writeFileSync('note.txt', 'created with sync fs', 'utf-8');
+const content = fs.readFileSync('note.txt', 'utf-8');
 
-// Write log file (create dir if missing)
-await mkdir('logs', { recursive: true });
-await writeFile('logs/app.log', \`\${new Date().toISOString()} Server started\\n\`, { flag: 'a' });
+// Callback style (legacy) — error-first: callback(err, result)
+fs.readFile('note.txt', 'utf-8', (err, data) => {
+  if (err) { console.error(err); return; }
+  console.log(data);
+});
 
-// Check if file exists
-async function exists(path: string) {
-  try {
-    await access(path, constants.F_OK);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-// ❌ Never in a request handler:
-// const data = readFileSync('huge-file.csv'); // blocks ALL requests!`,
+// ✅ Promise style — use in servers and async handlers
+await fsPromises.writeFile('note.txt', 'created with promise fs', 'utf-8');
+await fsPromises.appendFile('note.txt', ' appended', 'utf-8');
+const promiseContent = await fsPromises.readFile('note.txt', 'utf-8');
+const stats = await fsPromises.stat('note.txt');
+console.log(stats.size, 'bytes');`,
     },
     quiz: {
       question: "Why avoid readFileSync in an Express request handler?",
@@ -447,29 +462,24 @@ async function exists(path: string) {
       "Don't use Buffer for very large files — use streams to avoid loading everything into memory.",
     ],
     example: {
-      title: "Working with Buffers",
+      title: "Creating and combining Buffers",
+      ref: "examples/nodejs/08-buffers.ts",
       language: "typescript",
-      code: `// Create and encode
-const buf = Buffer.from('Hello, Node!');
-console.log(buf.toString('utf8'));   // 'Hello, Node!'
-console.log(buf.toString('base64')); // 'SGVsbG8sIE5vZGUh'
-console.log(buf.length);             // 12 bytes
+      code: `// Buffer = raw bytes (used in HTTP bodies, streams, files, crypto)
+const textBuffer = Buffer.from('Node');
+console.log(textBuffer);                    // <Buffer 4e 6f 64 65>
+console.log(textBuffer.toString('utf-8'));  // 'Node'
+console.log(textBuffer.length);             // 4 bytes
 
-// Decode base64 (e.g. from a data URL)
-const imageBuf = Buffer.from(base64String, 'base64');
+// Pre-allocate fixed size
+const fixed = Buffer.alloc(5);
+fixed.write('API');
+console.log(fixed.toString('utf-8')); // 'API'
 
-// Collect stream chunks into one Buffer
-const chunks: Buffer[] = [];
-for await (const chunk of readableStream) {
-  chunks.push(chunk as Buffer);
-}
-const fullBuffer = Buffer.concat(chunks);
-
-// Secure comparison (timing-safe)
-import { timingSafeEqual } from 'node:crypto';
-const a = Buffer.from(tokenFromRequest);
-const b = Buffer.from(expectedToken);
-const valid = a.length === b.length && timingSafeEqual(a, b);`,
+// Combine chunks (e.g. from HTTP request body stream)
+const chunks = [Buffer.from('Hello '), Buffer.from('Node '), Buffer.from('JS')];
+const combined = Buffer.concat(chunks);
+console.log(combined.toString('utf-8')); // 'Hello Node JS'`,
     },
     quiz: {
       question: "When do you typically encounter Buffers in a Node API?",
@@ -502,28 +512,28 @@ const valid = a.length === b.length && timingSafeEqual(a, b);`,
       "Validate redirect URLs — never redirect to user-supplied URLs without an allowlist.",
     ],
     example: {
-      title: "Parsing and building URLs",
+      title: "Parsing URLs and query strings",
+      ref: "examples/nodejs/09-url-module.ts",
       language: "typescript",
-      code: `// Parse a request URL (plain Node HTTP server)
-const url = new URL(req.url ?? '/', \`http://\${req.headers.host}\`);
-const path = url.pathname;           // '/api/users'
-const page = url.searchParams.get('page'); // '2'
-const limit = Number(url.searchParams.get('limit') ?? 20);
+      code: `// Parse a full URL
+const apiUrl = new URL('https://api.example.com/users?page=2&limit=10&sort=latest');
 
-// Build an external API URL safely
-const apiUrl = new URL('/v1/users', 'https://api.example.com');
-apiUrl.searchParams.set('active', 'true');
-// → https://api.example.com/v1/users?active=true
+const page = apiUrl.searchParams.get('page');   // '2'
+const limit = apiUrl.searchParams.get('limit'); // '10'
 
-// Validate redirect (prevent open redirect attacks)
-const ALLOWED = ['https://myapp.com', 'https://staging.myapp.com'];
-function safeRedirect(target: string) {
-  const url = new URL(target);
-  if (!ALLOWED.some((origin) => url.origin === new URL(origin).origin)) {
-    throw new Error('Invalid redirect target');
-  }
-  return url.toString();
-}`,
+// Modify query params
+apiUrl.searchParams.set('page', '10');
+apiUrl.searchParams.set('limit', '20');
+console.log(apiUrl.href);
+// → https://api.example.com/users?page=10&limit=20&sort=latest
+
+// Build query string from object
+const params = new URLSearchParams({ search: 'node js', page: '1', limit: '5' });
+console.log(params.toString()); // search=node+js&page=1&limit=5
+
+// In plain Node HTTP — parse incoming request URL
+const requestUrl = new URL(req.url ?? '/', \`http://\${req.headers.host}\`);
+const pathName = requestUrl.pathname; // '/users'`,
     },
     quiz: {
       question: "How do you read ?page=2 from a URL in Node?",
@@ -556,34 +566,36 @@ function safeRedirect(target: string) {
       "Many Node internals use EventEmitter — http.Server emits 'request', streams emit 'data' and 'end'.",
     ],
     example: {
-      title: "EventEmitter pattern",
+      title: "EventEmitter — on, once, emit",
+      ref: "examples/nodejs/10-event-emitter.ts",
       language: "typescript",
-      code: `import { EventEmitter } from 'node:events';
+      code: `import EventEmitter from 'node:events';
 
-class UserService extends EventEmitter {
-  async create(data: { email: string; name: string }) {
-    const user = await db.users.insert(data);
-    this.emit('user:created', user); // notify listeners
-    return user;
-  }
+const appEvents = new EventEmitter();
+
+type UserRegistered = { id: number; email: string };
+
+// .on() — runs every time the event fires
+appEvents.on('user:registered', (user: UserRegistered) => {
+  console.log(\`Email listener: welcome email to \${user.email}\`);
+});
+
+appEvents.on('user:registered', (user: UserRegistered) => {
+  console.log(\`Log listener: user \${user.id} registered\`);
+});
+
+// .once() — runs at most one time
+appEvents.once('app:started', () => console.log('App started (once only)'));
+
+function registerUser() {
+  const user = { id: 1, email: 'alex@example.com' };
+  console.log('User saved to DB');
+  appEvents.emit('user:registered', user); // triggers all listeners
 }
 
-const userService = new UserService();
-
-// Register listeners at startup
-userService.on('user:created', (user) => {
-  emailQueue.add('welcome', { to: user.email });
-});
-
-userService.once('user:created', (user) => {
-  console.log('First user created!', user.id); // fires only once ever
-});
-
-// http.Server is an EventEmitter
-import { createServer } from 'node:http';
-const server = createServer();
-server.on('request', (req, res) => { /* handle */ });
-server.on('error', (err) => console.error(err)); // always handle errors!`,
+appEvents.emit('app:started');
+appEvents.emit('app:started'); // second emit ignored by .once() listener
+registerUser();`,
     },
     quiz: {
       question: "What's the difference between .on() and .once()?",
@@ -628,29 +640,31 @@ server.on('error', (err) => console.error(err)); // always handle errors!`,
       },
     ],
     example: {
-      title: "Streaming a file download",
+      title: "Readable → Transform → Writable pipeline",
+      ref: "examples/nodejs/11-streams.ts",
       language: "typescript",
-      code: `import { createReadStream, createWriteStream } from 'node:fs';
+      code: `import { Readable, Transform, Writable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { createGzip } from 'node:zlib';
 
-// Stream file to HTTP response (plain Node)
-import { createServer } from 'node:http';
-createServer((req, res) => {
-  if (req.url === '/export') {
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename="export.csv"');
-    createReadStream('large-export.csv').pipe(res);
-    // Memory stays low — only one chunk in memory at a time
-  }
-}).listen(3000);
+const readableStream = Readable.from(['hello ', 'from ', 'node.js ', 'streams']);
 
-// pipeline() — modern alternative to .pipe() with automatic error handling
-await pipeline(
-  createReadStream('input.txt'),
-  createGzip(),
-  createWriteStream('input.txt.gz')
-);`,
+const uppercaseTransform = new Transform({
+  transform(chunk, _encoding, callback) {
+    callback(null, chunk.toString().toUpperCase());
+  },
+});
+
+const writableStream = new Writable({
+  write(chunk, _encoding, callback) {
+    console.log('received chunk:', chunk.toString());
+    callback();
+  },
+});
+
+// pipeline() handles errors and backpressure automatically
+await pipeline(readableStream, uppercaseTransform, writableStream);
+console.log('Stream completed');
+// Output: HELLO FROM NODE.JS STREAMS (one chunk at a time)`,
     },
     quiz: {
       question: "Why use streams instead of readFile for a 500MB file?",
@@ -683,37 +697,57 @@ await pipeline(
       "Express/Fastify abstract all of this — use them in production, learn plain http for understanding.",
     ],
     example: {
-      title: "Plain Node HTTP server with routing and JSON",
+      title: "Progressive HTTP server (basic → routing → body → JSON)",
+      ref: "examples/nodejs/01-basic-http-server.ts → 04-json-response.ts",
       language: "typescript",
-      code: `import { createServer } from 'node:http';
+      code: `import http, { IncomingMessage, ServerResponse } from 'node:http';
 
-const server = createServer(async (req, res) => {
-  const url = new URL(req.url ?? '/', \`http://\${req.headers.host}\`);
+// Step 1: Basic server — method, url, headers (01-basic-http-server.ts)
+// Step 2: Routing with URL pathname (02-routing.ts)
+// Step 3: Reading POST body from stream chunks (03-reading-body.ts)
+// Step 4: Consistent JSON responses (04-json-response.ts)
 
-  // Route: GET /api/users
-  if (req.method === 'GET' && url.pathname === '/api/users') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify([{ id: 1, name: 'Alex' }]));
+type User = { id: number; name: string; email: string };
+
+function sendJson<T>(res: ServerResponse, status: number, body: T) {
+  res.statusCode = status;
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify(body));
+}
+
+const server = http.createServer((req: IncomingMessage, res: ServerResponse) => {
+  const method = req.method ?? 'GET';
+  const requestUrl = new URL(req.url ?? '/', \`http://\${req.headers.host}\`);
+  const pathName = requestUrl.pathname;
+
+  if (method === 'GET' && pathName === '/health') {
+    sendJson(res, 200, { success: true, message: 'server is healthy' });
     return;
   }
 
-  // Route: POST /api/users — read body
-  if (req.method === 'POST' && url.pathname === '/api/users') {
+  if (method === 'GET' && pathName === '/users') {
+    sendJson(res, 200, { success: true, data: [{ id: 1, name: 'Alex' }] });
+    return;
+  }
+
+  if (method === 'POST' && pathName === '/users') {
     const chunks: Buffer[] = [];
-    for await (const chunk of req) chunks.push(chunk as Buffer);
-    const body = JSON.parse(Buffer.concat(chunks).toString());
-
-    const newUser = { id: 2, ...body };
-    res.writeHead(201, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(newUser));
+    req.on('data', (chunk: Buffer) => chunks.push(chunk));
+    req.on('end', () => {
+      try {
+        const body = JSON.parse(Buffer.concat(chunks).toString('utf-8'));
+        sendJson(res, 201, { success: true, data: { id: 2, ...body } });
+      } catch {
+        sendJson(res, 400, { success: false, error: 'invalid json body' });
+      }
+    });
     return;
   }
 
-  res.writeHead(404);
-  res.end('Not found');
+  sendJson(res, 404, { success: false, message: 'route not found' });
 });
 
-server.listen(3000, () => console.log('http://localhost:3000'));`,
+server.listen(5000, () => console.log('http://localhost:5000'));`,
     },
     quiz: {
       question: "In plain Node HTTP, how do you send a JSON response?",
@@ -746,40 +780,48 @@ server.listen(3000, () => console.log('http://localhost:3000'));`,
       "Always handle errors — network failures throw; non-2xx responses don't throw by default.",
     ],
     example: {
-      title: "Calling an external API with timeout",
+      title: "Fetching external APIs with AbortController timeout",
+      ref: "examples/nodejs/05-external-api-calls.ts",
       language: "typescript",
-      code: `async function callExternalApi(endpoint: string, options: RequestInit = {}) {
+      code: `const API_URL = 'https://jsonplaceholder.typicode.com/users/1';
+
+async function fetchExternalUser(): Promise<void> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 5000); // 5s timeout
+  const timeout = setTimeout(() => controller.abort(), 5000);
 
   try {
-    const res = await fetch(\`https://api.example.com\${endpoint}\`, {
-      ...options,
+    const response = await fetch(API_URL, {
+      method: 'GET',
       signal: controller.signal,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': \`Bearer \${process.env.API_KEY}\`,
-        ...options.headers,
-      },
     });
 
-    if (!res.ok) {
-      throw new Error(\`API error: \${res.status} \${res.statusText}\`);
+    if (!response.ok) {
+      console.error(\`upstream API failed with HTTP \${response.status}\`);
+      return;
     }
 
-    return await res.json();
-  } catch (err) {
-    if (err instanceof Error && err.name === 'AbortError') {
-      throw new Error('Request timed out after 5 seconds');
+    const rawUser = await response.json();
+    const user = {
+      id: rawUser.id,
+      name: rawUser.name,
+      email: rawUser.email,
+      company: rawUser.company.name, // transform before returning to client
+    };
+
+    console.log(user);
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.error('request timed out after 5 seconds');
+      return;
     }
-    throw err;
+    const message = error instanceof Error ? error.message : 'unknown error';
+    console.error('External API failed:', message);
   } finally {
     clearTimeout(timeout);
   }
 }
 
-// Usage in a service
-const user = await callExternalApi('/users/42');`,
+fetchExternalUser();`,
     },
     quiz: {
       question: "How do you cancel a fetch request after 3 seconds in Node?",
