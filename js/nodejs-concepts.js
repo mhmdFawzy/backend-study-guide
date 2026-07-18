@@ -63,6 +63,10 @@ npm install          # install all deps
 npm install zod      # add runtime dependency
 npm run dev          # start dev server`,
     },
+    packages: [
+      { name: "nvm / fnm", use: "Switch Node.js versions per project (like nvm for macOS/Linux)" },
+      { name: "npm-check-updates", use: "Check and upgrade outdated dependencies" },
+    ],
     quiz: {
       question: "Where does npm install packages?",
       options: [
@@ -112,6 +116,11 @@ npm run dev          # start dev server`,
   "exclude": ["node_modules", "dist"]
 }`,
     },
+    packages: [
+      { name: "tsx", use: "Run TypeScript directly in dev — no separate compile step" },
+      { name: "ts-node", use: "Older alternative to tsx for running .ts files" },
+      { name: "@types/node", use: "TypeScript type definitions for Node.js built-ins" },
+    ],
     quiz: {
       question: "What does `\"strict\": true` in tsconfig.json do?",
       options: [
@@ -168,6 +177,11 @@ if (shouldFail) {
 
 console.log({ command, port, nodeEnv });`,
     },
+    packages: [
+      { name: "dotenv", use: "Loads variables from a `.env` file into `process.env` at startup" },
+      { name: "envalid", use: "Validates and types env vars — fails fast if required vars are missing" },
+      { name: "cross-env", use: "Sets env vars in npm scripts cross-platform (Windows + Unix)" },
+    ],
     quiz: {
       question: "Where should JWT_SECRET be read from in a Node backend?",
       options: [
@@ -234,6 +248,12 @@ const fileExt = path.extname(uploadPath);    // .png
 // os — system info (useful for cluster sizing)
 console.log(os.platform(), os.arch(), os.cpus().length, 'CPU cores');`,
     },
+    packages: [
+      { name: "bcrypt / bcryptjs", use: "Hash passwords — never use plain SHA-256 for passwords" },
+      { name: "argon2", use: "Modern password hashing — recommended over bcrypt for new projects" },
+      { name: "jsonwebtoken", use: "Create and verify JWT tokens (pairs with built-in crypto for signing)" },
+      { name: "pathe", use: "ESM-friendly path utilities — drop-in alternative to built-in `path`" },
+    ],
     quiz: {
       question: "Why use path.join() instead of string concatenation for file paths?",
       options: [
@@ -293,6 +313,10 @@ setImmediate(() => console.log('setImmediate callback'));
 await sleep(1500);
 console.log('woke up after 1.5 seconds');`,
     },
+    packages: [
+      { name: "node-cron", use: "Cron-style scheduled jobs — cleaner than raw setInterval for recurring tasks" },
+      { name: "p-timeout", use: "Add timeouts to any Promise — useful for wrapping slow API calls" },
+    ],
     quiz: {
       question: "What's the difference between setImmediate and setTimeout(fn, 0)?",
       options: [
@@ -377,6 +401,10 @@ async function findUser(userId: number): Promise<User> {
   }
 }`,
     },
+    packages: [
+      { name: "p-limit", use: "Limit concurrent async operations — e.g. max 5 parallel DB queries" },
+      { name: "p-queue", use: "Priority queue for async tasks with concurrency control" },
+    ],
     quiz: {
       question: "In Node's error-first callback `(err, data) => {}`, what should you check first?",
       options: [
@@ -431,6 +459,11 @@ const promiseContent = await fsPromises.readFile('note.txt', 'utf-8');
 const stats = await fsPromises.stat('note.txt');
 console.log(stats.size, 'bytes');`,
     },
+    packages: [
+      { name: "fs-extra", use: "Extra fs methods — `copy()`, `ensureDir()`, `remove()` with Promise support" },
+      { name: "chokidar", use: "Watch files/folders for changes — used by dev tools and hot reload" },
+      { name: "fast-glob", use: "Fast file pattern matching — `**/*.ts` across large directories" },
+    ],
     quiz: {
       question: "Why avoid readFileSync in an Express request handler?",
       options: [
@@ -481,6 +514,9 @@ const chunks = [Buffer.from('Hello '), Buffer.from('Node '), Buffer.from('JS')];
 const combined = Buffer.concat(chunks);
 console.log(combined.toString('utf-8')); // 'Hello Node JS'`,
     },
+    packages: [
+      { name: "sharp", use: "High-performance image processing — resize, convert formats (works with Buffers)" },
+    ],
     quiz: {
       question: "When do you typically encounter Buffers in a Node API?",
       options: [
@@ -535,6 +571,9 @@ console.log(params.toString()); // search=node+js&page=1&limit=5
 const requestUrl = new URL(req.url ?? '/', \`http://\${req.headers.host}\`);
 const pathName = requestUrl.pathname; // '/users'`,
     },
+    packages: [
+      { name: "qs", use: "Parse and stringify query strings — supports nested objects (`?filter[name]=a`)" },
+    ],
     quiz: {
       question: "How do you read ?page=2 from a URL in Node?",
       options: [
@@ -597,6 +636,9 @@ appEvents.emit('app:started');
 appEvents.emit('app:started'); // second emit ignored by .once() listener
 registerUser();`,
     },
+    packages: [
+      { name: "eventemitter3", use: "Faster drop-in replacement for built-in EventEmitter" },
+    ],
     quiz: {
       question: "What's the difference between .on() and .once()?",
       options: [
@@ -666,6 +708,10 @@ await pipeline(readableStream, uppercaseTransform, writableStream);
 console.log('Stream completed');
 // Output: HELLO FROM NODE.JS STREAMS (one chunk at a time)`,
     },
+    packages: [
+      { name: "multer", use: "Express middleware for handling `multipart/form-data` file uploads via streams" },
+      { name: "split2", use: "Split a stream into lines — common for processing log files line by line" },
+    ],
     quiz: {
       question: "Why use streams instead of readFile for a 500MB file?",
       options: [
@@ -749,6 +795,11 @@ const server = http.createServer((req: IncomingMessage, res: ServerResponse) => 
 
 server.listen(5000, () => console.log('http://localhost:5000'));`,
     },
+    packages: [
+      { name: "express", use: "Most popular HTTP framework — routing, middleware, JSON parsing built in" },
+      { name: "fastify", use: "High-performance alternative to Express — schema validation, hooks" },
+      { name: "hono", use: "Lightweight, fast framework — works on Node, Cloudflare Workers, and edge" },
+    ],
     quiz: {
       question: "In plain Node HTTP, how do you send a JSON response?",
       options: [
@@ -823,6 +874,11 @@ async function fetchExternalUser(): Promise<void> {
 
 fetchExternalUser();`,
     },
+    packages: [
+      { name: "axios", use: "Popular HTTP client — interceptors, automatic JSON, wide browser + Node support" },
+      { name: "got", use: "Node-focused HTTP client — retries, pagination, and hooks built in" },
+      { name: "ky", use: "Tiny fetch wrapper with retries and timeout — good for simple API calls" },
+    ],
     quiz: {
       question: "How do you cancel a fetch request after 3 seconds in Node?",
       options: [
@@ -896,6 +952,10 @@ const data = await readFile('big-file.json'); // other requests proceed
 
 // CPU-heavy work → worker thread or job queue, not main thread`,
     },
+    packages: [
+      { name: "clinic.js", use: "Diagnose performance issues — event loop delay, memory leaks, CPU profiling" },
+      { name: "autocannon", use: "HTTP load testing — benchmark how many requests/sec your server handles" },
+    ],
     quiz: {
       question: "What happens if you run a 5-second while loop in an Express handler?",
       options: [
@@ -953,6 +1013,9 @@ if (cluster.isPrimary) {
   console.log(\`Worker \${process.pid} started\`);
 }`,
     },
+    packages: [
+      { name: "pm2", use: "Process manager — cluster mode, auto-restart on crash, zero-downtime reloads" },
+    ],
     quiz: {
       question: "When should you use the cluster module vs Kubernetes replicas?",
       options: [
