@@ -8,7 +8,7 @@ Based on the [Backend from First Principles](https://www.youtube.com/playlist?li
 
 ## What's inside
 
-- 29 backend concepts with frontend-friendly explanations
+- 39 backend concepts with frontend-friendly explanations
 - Code examples for every topic
 - Interactive HTTP request builder
 - Middleware pipeline visualizer
@@ -19,9 +19,9 @@ Based on the [Backend from First Principles](https://www.youtube.com/playlist?li
 
 | Phase | Concepts |
 |-------|----------|
-| Foundations | HTTP, Routing, Serialization |
-| Security & Pipeline | Auth, Validation, Middleware, Request Context |
-| Application Layer | Handlers, CRUD, REST, Databases, Business Logic |
+| Foundations | HTTP, Servers, Routing, Serialization |
+| Security & Pipeline | Auth, Validation, Middleware, CORS, Rate Limiting, Request Context |
+| Application Layer | MVC, CRUD, REST, GraphQL, Pagination, Idempotency, Databases, Migrations, Transactions, Business Logic |
 | Data & Performance | Caching, Emails, Queues, Elasticsearch, Errors |
 | Operations | Logging, Security, Scaling, Webhooks, DevOps, and more |
 

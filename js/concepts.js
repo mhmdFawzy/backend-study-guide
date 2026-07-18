@@ -623,6 +623,143 @@ app.use(errorHandler);  // 5. Catch all errors (last!)`,
     },
   },
   {
+    id: "cors",
+    title: "CORS (Cross-Origin Resource Sharing)",
+    phase: "Security & Pipeline",
+    summary:
+      "CORS is a browser security rule that blocks JavaScript from calling APIs on a different origin (domain, port, or protocol) unless the server explicitly allows it. Your `fetch('https://api.example.com/users')` from `https://myapp.com` is a cross-origin request — the browser sends it but may hide the response unless the API returns the right CORS headers. Postman and curl are not browsers, so they never enforce CORS — which is why APIs 'work in Postman but fail in the browser'.",
+    frontendAnalogy:
+      "When your React app on `localhost:5173` calls an API on `localhost:3000`, that's cross-origin (different ports count). The browser blocks the response unless the API says 'localhost:5173 is allowed'. You fix it on the backend by adding CORS headers — there is nothing your frontend code alone can do to bypass this security rule.",
+    backendPerspective:
+      "You configure CORS middleware to send `Access-Control-Allow-Origin` (which frontend origins may call your API), `Access-Control-Allow-Methods` (GET, POST, etc.), and `Access-Control-Allow-Headers` (Authorization, Content-Type). For requests with custom headers or non-simple methods, the browser first sends an OPTIONS preflight request — your server must respond 204 with the same CORS headers before the real request proceeds. In production, whitelist specific origins — never use `*` with credentials.",
+    keyPoints: [
+      "Same-origin = same protocol + domain + port. `https://app.com` → `https://api.app.com` is cross-origin even on the same registrable domain.",
+      "Simple requests (GET, POST with standard headers) go straight through if CORS headers are present on the response.",
+      "Preflight OPTIONS — browser sends OPTIONS first for PUT/DELETE, custom headers (Authorization), or JSON Content-Type. Server must answer before the real request runs.",
+      "`Access-Control-Allow-Credentials: true` requires a specific origin (not `*`) and `fetch(..., { credentials: 'include' })` on the client for cookies.",
+      "CORS is browser-only — server-to-server calls, mobile apps, and Postman ignore it entirely.",
+    ],
+    terminology: [
+      {
+        term: "Origin",
+        definition:
+          "The combination of protocol, hostname, and port — e.g. `https://app.example.com:443`. Two URLs with different origins cannot share data unless CORS allows it.",
+      },
+      {
+        term: "Preflight request",
+        definition:
+          "An automatic OPTIONS request the browser sends before the real request when it detects a 'non-simple' cross-origin call. Your API must respond with allowed methods and headers.",
+      },
+      {
+        term: "Access-Control-Allow-Origin",
+        definition:
+          "Response header listing which origin(s) may read the response. Set to your frontend URL in production, e.g. `https://myapp.com`.",
+      },
+    ],
+    example: {
+      title: "CORS middleware (Express)",
+      language: "typescript",
+      code: `import cors from 'cors';
+
+// ✅ Production — whitelist specific origins
+app.use(cors({
+  origin: ['https://myapp.com', 'http://localhost:5173'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true, // allow cookies — origin cannot be '*'
+}));
+
+// Browser flow for: fetch('https://api.example.com/users', {
+//   headers: { Authorization: 'Bearer ...' }
+// })
+// 1. Browser sends: OPTIONS /users  (preflight)
+// 2. Server responds: 204 + Access-Control-Allow-Origin: https://myapp.com
+// 3. Browser sends:  GET /users    (real request)
+// 4. Server responds: 200 + data + CORS headers`,
+    },
+    quiz: {
+      question: "Your API works in Postman but fetch() gets a CORS error. What's wrong?",
+      options: [
+        "The API is down",
+        "The browser blocked the response because CORS headers are missing or wrong",
+        "You need to use GET instead of POST",
+        "JWT tokens don't work in browsers",
+      ],
+      correctIndex: 1,
+      explanation:
+        "Postman doesn't enforce CORS. Browsers do. The API must return Access-Control-Allow-Origin (and handle OPTIONS preflight) for cross-origin browser requests.",
+    },
+  },
+  {
+    id: "rate-limiting",
+    title: "Rate Limiting & Throttling",
+    phase: "Security & Pipeline",
+    summary:
+      "Rate limiting caps how many requests a client can make in a time window — e.g. 100 requests per minute per IP or per API key. It protects your API from abuse, brute-force login attacks, and accidental infinite loops in frontend code. When the limit is exceeded, the server returns 429 Too Many Requests, often with a `Retry-After` header telling the client when to try again.",
+    frontendAnalogy:
+      "Like a form that disables the submit button for 30 seconds after 5 failed attempts — but enforced server-side so attackers can't bypass it. Your frontend should handle 429 responses gracefully (show 'slow down' message, exponential backoff on retries).",
+    backendPerspective:
+      "You implement rate limiting in middleware using Redis (shared across server instances) or in-memory stores for single-instance dev. Common strategies: fixed window (100/min), sliding window (smoother), or token bucket (allows bursts). Apply stricter limits on `/auth/login` and `/auth/register` than on public read endpoints. Return `429` with `Retry-After` and log blocked IPs for monitoring.",
+    keyPoints: [
+      "Per-IP limiting — simplest; stops basic abuse but shared NAT IPs (offices) can hit limits together.",
+      "Per-user / per-API-key limiting — fairer for authenticated APIs; track by user ID or key after auth middleware.",
+      "Redis-backed counters — required when running multiple server instances so all instances share the same count.",
+      "Different limits per route — login: 5/min, public API: 100/min, admin: 1000/min.",
+      "429 Too Many Requests — standard status; include Retry-After header (seconds until reset).",
+    ],
+    terminology: [
+      {
+        term: "Rate limit",
+        definition:
+          "A cap on requests per time window per client identifier (IP, user ID, API key). Exceeding it returns 429.",
+      },
+      {
+        term: "Token bucket",
+        definition:
+          "Algorithm that allows bursts (bucket fills with tokens over time) while maintaining an average rate limit.",
+      },
+      {
+        term: "Retry-After",
+        definition:
+          "HTTP response header telling the client how many seconds to wait before retrying after a 429 response.",
+      },
+    ],
+    example: {
+      title: "Rate limiting login endpoint",
+      language: "typescript",
+      code: `import rateLimit from 'express-rate-limit';
+import RedisStore from 'rate-limit-redis';
+
+// Strict limit on auth — prevent brute force
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,                    // 5 attempts per window
+  message: { error: 'Too many login attempts. Try again in 15 minutes.' },
+  standardHeaders: true,     // RateLimit-* headers
+  legacyHeaders: false,
+  store: new RedisStore({ client: redis }), // shared across instances
+});
+
+app.post('/auth/login', loginLimiter, loginHandler);
+
+// General API limit
+const apiLimiter = rateLimit({ windowMs: 60_000, max: 100 });
+app.use('/api/', apiLimiter);`,
+    },
+    quiz: {
+      question: "Why rate-limit the login endpoint more strictly than GET /api/products?",
+      options: [
+        "GET requests are always safe",
+        "Login endpoints are prime targets for brute-force password attacks",
+        "Rate limiting only works on POST",
+        "Products don't need authentication",
+      ],
+      correctIndex: 1,
+      explanation:
+        "Auth endpoints face brute-force attacks. Stricter limits (e.g. 5 attempts per 15 min) slow attackers without hurting normal product browsing.",
+    },
+  },
+  {
     id: "request-context",
     title: "Request Context",
     phase: "Security & Pipeline",
@@ -855,6 +992,238 @@ POST   /api/deleteUser/42
     },
   },
   {
+    id: "graphql",
+    title: "GraphQL",
+    phase: "Application Layer",
+    summary:
+      "GraphQL is an alternative to REST where the client sends a single query describing exactly what data it needs, and the server returns only that shape. One endpoint (`POST /graphql`) replaces dozens of REST routes. Frontend teams love it because you can fetch a user and their posts in one request without over-fetching or chaining multiple API calls.",
+    frontendAnalogy:
+      "REST is like ordering fixed menu combos — you get everything on the plate whether you need it or not. GraphQL is like building your own bowl: you specify `{ user { name posts { title } } }` and get exactly those fields. Libraries like Apollo Client or urql handle caching and queries on the frontend.",
+    backendPerspective:
+      "You define a schema (types, queries, mutations) and resolvers — functions that fetch data for each field. Resolvers can call services, databases, or other APIs. Watch for the N+1 problem (one query per nested field) — solve with DataLoader batching. GraphQL needs its own auth, validation, and rate limiting; complexity moves from many endpoints to one powerful endpoint.",
+    keyPoints: [
+      "Schema-first — define types (`User`, `Post`) and operations (`Query`, `Mutation`) before writing resolvers.",
+      "Resolvers — functions mapped to each field; a `posts` field on `User` runs a resolver that queries the database.",
+      "Over-fetching vs under-fetching — REST returns fixed shapes; GraphQL returns exactly what the client asks for.",
+      "N+1 problem — fetching 10 users then 10 separate post queries; fix with DataLoader or JOIN in parent resolver.",
+      "When to use — complex UIs with varied data needs, mobile apps on slow networks; skip for simple CRUD or public APIs.",
+    ],
+    terminology: [
+      {
+        term: "Query",
+        definition:
+          "A GraphQL read operation — equivalent to GET in REST. Clients request nested data in one round trip.",
+      },
+      {
+        term: "Mutation",
+        definition:
+          "A GraphQL write operation — creates, updates, or deletes data. Equivalent to POST/PUT/DELETE in REST.",
+      },
+      {
+        term: "Resolver",
+        definition:
+          "A function that returns the value for a field in your schema. Each field can have its own resolver.",
+      },
+    ],
+    example: {
+      title: "GraphQL query vs multiple REST calls",
+      language: "graphql",
+      code: `# One GraphQL request — client specifies exact shape
+POST /graphql
+{
+  "query": "{
+    user(id: 42) {
+      name
+      email
+      posts(limit: 5) { title createdAt }
+    }
+  }"
+}
+
+# REST equivalent — 2+ round trips
+GET /api/users/42
+GET /api/users/42/posts?limit=5
+
+# Resolver (simplified)
+const resolvers = {
+  Query: {
+    user: (_, { id }) => userService.findById(id),
+  },
+  User: {
+    posts: (user, { limit }) => postService.findByUser(user.id, limit),
+  },
+};`,
+    },
+    quiz: {
+      question: "What's a common GraphQL performance pitfall?",
+      options: [
+        "It only supports GET requests",
+        "N+1 queries — one DB call per nested field without batching",
+        "It cannot handle authentication",
+        "It replaces the need for a database",
+      ],
+      correctIndex: 1,
+      explanation:
+        "Resolvers run per field. Fetching 100 users with posts can trigger 101 DB queries. DataLoader or eager JOINs fix this.",
+    },
+  },
+  {
+    id: "pagination",
+    title: "Pagination & Filtering",
+    phase: "Application Layer",
+    summary:
+      "List endpoints never return all rows — they return a page of results plus metadata so the client can fetch more. Offset pagination (`?page=2&limit=20`) is simple but slow on large tables. Cursor pagination (`?cursor=abc&limit=20`) is faster and stable when data changes between requests. Filtering and sorting via query params (`?status=active&sort=-createdAt`) let clients narrow results without new endpoints.",
+    frontendAnalogy:
+      "Like infinite scroll or 'Load more' in your UI — you pass the last item's ID or page number to get the next batch. React Query's `useInfiniteQuery` maps directly to cursor-based APIs. Your table components consume `data`, `total`, `hasMore`, and `nextCursor` from the response.",
+    backendPerspective:
+      "You parse `page`, `limit`, `cursor`, `sort`, and filter params in the controller, validate them (max limit = 100), and pass them to the service/repository. Return a consistent envelope: `{ data: [...], meta: { total, page, limit, nextCursor, hasMore } }`. Use indexed columns for sort/filter fields. Default `limit` to something reasonable (20) and cap it to prevent abuse.",
+    keyPoints: [
+      "Offset pagination — `LIMIT 20 OFFSET 40` for page 3; simple but slow on deep pages (DB scans skipped rows).",
+      "Cursor pagination — `WHERE id > :cursor ORDER BY id LIMIT 20`; fast and stable; no duplicate/skipped rows when data changes.",
+      "Filtering — `?status=active&role=admin` maps to WHERE clauses; validate allowed filter values to prevent injection.",
+      "Sorting — `?sort=-createdAt` (desc) or `?sort=name` (asc); whitelist sortable columns — never pass user input directly into ORDER BY.",
+      "Response envelope — always include `hasMore` or `nextCursor` so the frontend knows whether to show 'Load more'.",
+    ],
+    terminology: [
+      {
+        term: "Offset pagination",
+        definition:
+          "Skip N rows with OFFSET — page 3 with limit 20 means OFFSET 40. Easy to implement but degrades on large offsets.",
+      },
+      {
+        term: "Cursor pagination",
+        definition:
+          "Use the last item's ID or timestamp as a bookmark. `WHERE id > cursor` — efficient for infinite scroll and live feeds.",
+      },
+      {
+        term: "Query string filtering",
+        definition:
+          "Filter params in the URL (`?status=active`) translated to database WHERE clauses. Whitelist allowed values server-side.",
+      },
+    ],
+    example: {
+      title: "Offset vs cursor pagination",
+      language: "typescript",
+      code: `// Offset — simple, good for admin tables with page numbers
+// GET /api/users?page=2&limit=20&status=active&sort=-createdAt
+async function listUsers({ page = 1, limit = 20, status, sort }) {
+  const safeLimit = Math.min(limit, 100);
+  const [data, total] = await Promise.all([
+    db.users.findMany({
+      where: { status },
+      orderBy: parseSort(sort), // whitelist: createdAt, name
+      skip: (page - 1) * safeLimit,
+      take: safeLimit,
+    }),
+    db.users.count({ where: { status } }),
+  ]);
+  return { data, meta: { total, page, limit: safeLimit, hasMore: page * safeLimit < total } };
+}
+
+// Cursor — better for infinite scroll
+// GET /api/posts?cursor=post_abc&limit=20
+async function listPosts({ cursor, limit = 20 }) {
+  const data = await db.posts.findMany({
+    where: cursor ? { id: { gt: cursor } } : {},
+    orderBy: { id: 'asc' },
+    take: limit + 1, // fetch one extra to detect hasMore
+  });
+  const hasMore = data.length > limit;
+  if (hasMore) data.pop();
+  return { data, meta: { nextCursor: data.at(-1)?.id, hasMore } };
+}`,
+    },
+    quiz: {
+      question: "Why is cursor pagination better than offset for infinite scroll feeds?",
+      options: [
+        "Cursors use less memory in the browser",
+        "Offset skips rows — slow on deep pages and can duplicate/skip items when data changes",
+        "Cursor pagination doesn't need a database",
+        "Offset pagination is not supported by SQL",
+      ],
+      correctIndex: 1,
+      explanation:
+        "OFFSET 10000 makes the DB scan 10000 rows to skip them. Cursors use indexed WHERE clauses and stay stable when new items are inserted.",
+    },
+  },
+  {
+    id: "idempotency",
+    title: "Idempotency",
+    phase: "Application Layer",
+    summary:
+      "An idempotent operation produces the same result whether you run it once or many times. GET and DELETE are naturally idempotent; POST is not — calling POST /orders twice creates two orders. Payment APIs, webhooks, and retry logic require explicit idempotency keys so duplicate requests don't double-charge or create duplicate records.",
+    frontendAnalogy:
+      "Like clicking 'Pay' twice because the button didn't disable fast enough — you want the second click to be a no-op, not a second charge. Your frontend can send an `Idempotency-Key` header (a UUID generated once per action) so the server recognizes and deduplicates retries.",
+    backendPerspective:
+      "You accept an `Idempotency-Key` header on POST/PATCH endpoints that create side effects (payments, orders). Store the key + response in Redis or the database for 24 hours; if the same key arrives again, return the cached response without re-running the operation. Stripe and most payment providers require this. Webhook handlers should also check event IDs to avoid processing the same event twice.",
+    keyPoints: [
+      "Idempotent methods — GET, PUT, DELETE: calling twice has the same effect as once. POST is NOT idempotent by default.",
+      "Idempotency-Key header — client sends a unique UUID per logical operation; server stores key → response mapping.",
+      "Retry safety — network timeouts cause clients to retry; without idempotency keys, retries create duplicates.",
+      "Webhook deduplication — store processed event IDs (Stripe `evt_...`); skip if already handled.",
+      "TTL on stored keys — expire after 24h (Stripe's default); old keys can be safely forgotten.",
+    ],
+    terminology: [
+      {
+        term: "Idempotent",
+        definition:
+          "An operation that can be applied multiple times without changing the result beyond the first application. GET /users/42 always returns the same user.",
+      },
+      {
+        term: "Idempotency-Key",
+        definition:
+          "A unique client-generated header (UUID) sent with POST requests. Server returns the same response if the key was already processed.",
+      },
+      {
+        term: "Exactly-once semantics",
+        definition:
+          "The goal of idempotency — each logical action happens once even if the network delivers duplicate requests.",
+      },
+    ],
+    example: {
+      title: "Idempotent order creation",
+      language: "typescript",
+      code: `// Client — generate key once, reuse on retry
+const idempotencyKey = crypto.randomUUID();
+await fetch('/api/orders', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Idempotency-Key': idempotencyKey,
+  },
+  body: JSON.stringify({ items: cart }),
+});
+
+// Server — check key before creating
+app.post('/api/orders', async (req, res) => {
+  const key = req.headers['idempotency-key'];
+  if (!key) return res.status(400).json({ error: 'Idempotency-Key required' });
+
+  // Check if already processed
+  const cached = await redis.get(\`idempotency:\${key}\`);
+  if (cached) return res.status(200).json(JSON.parse(cached)); // same response
+
+  const order = await orderService.create(req.user.id, req.body);
+
+  // Store response for 24 hours
+  await redis.setex(\`idempotency:\${key}\`, 86400, JSON.stringify(order));
+  res.status(201).json(order);
+});`,
+    },
+    quiz: {
+      question: "A user's payment times out and the app retries POST /payments. Without idempotency keys, what happens?",
+      options: [
+        "The server returns 404",
+        "The user may be charged twice",
+        "The retry is automatically blocked by HTTP",
+        "Only GET requests can be retried",
+      ],
+      correctIndex: 1,
+      explanation:
+        "POST is not idempotent. A retry looks like a new payment. Idempotency-Key lets the server return the original result instead of charging again.",
+    },
+  },
+  {
     id: "databases",
     title: "Databases",
     phase: "Application Layer",
@@ -897,6 +1266,150 @@ const users = await prisma.user.findMany({
       correctIndex: 1,
       explanation:
         "Indexes are lookup structures that make finding rows by that column much faster.",
+    },
+  },
+  {
+    id: "migrations",
+    title: "Database Migrations",
+    phase: "Application Layer",
+    summary:
+      "Migrations are version-controlled files that describe how to change your database schema over time — add a column, create a table, add an index. Each migration has an `up` (apply) and `down` (rollback) step. They let your whole team and every environment (dev, staging, prod) stay in sync without manually running SQL. Never edit production schema by hand — always go through a migration.",
+    frontendAnalogy:
+      "Like Git for your database structure — each migration is a commit that changes the schema. Your frontend TypeScript types should match the latest migration; when a migration adds `avatar_url` to users, your API types and frontend interfaces need updating too.",
+    backendPerspective:
+      "You write migration files with your ORM (Prisma migrate, Drizzle kit, Knex, Rails migrations) or raw SQL. Run them in CI/CD before deploying new code that depends on the new schema. Migrations run in order by timestamp — never edit a migration that has already run in production; create a new one instead. Test migrations on a copy of production data before applying.",
+    keyPoints: [
+      "Up / down — every migration applies a change (up) and can reverse it (down) for rollbacks.",
+      "Ordered by timestamp — `20240115_add_email_to_users.sql` runs before `20240201_create_orders.sql`.",
+      "Never edit applied migrations — create a new migration to fix mistakes; editing breaks environments that already ran the old file.",
+      "Run before deploy — new code expecting a new column will crash if the migration hasn't run yet.",
+      "Zero-downtime migrations — add nullable columns first, backfill data, then add constraints in separate steps for large tables.",
+    ],
+    terminology: [
+      {
+        term: "Migration",
+        definition:
+          "A versioned file that changes database schema. Tracked in a migrations table so each environment knows which have been applied.",
+      },
+      {
+        term: "Schema drift",
+        definition:
+          "When dev/staging/prod databases have different structures because someone changed schema manually. Migrations prevent this.",
+      },
+      {
+        term: "Rollback",
+        definition:
+          "Running the `down` step of a migration to undo a schema change. Not always possible (e.g. dropping a column loses data).",
+      },
+    ],
+    example: {
+      title: "Prisma migration workflow",
+      language: "bash",
+      code: `# 1. Change schema in prisma/schema.prisma
+# model User {
+#   id    Int    @id @default(autoincrement())
+#   email String @unique
+#   name  String
+# + avatarUrl String?   ← new field
+# }
+
+# 2. Generate migration file
+npx prisma migrate dev --name add_avatar_url
+# → creates prisma/migrations/20240115_add_avatar_url/migration.sql
+
+# 3. SQL generated automatically:
+# ALTER TABLE "User" ADD COLUMN "avatarUrl" TEXT;
+
+# 4. In production CI/CD:
+npx prisma migrate deploy   # applies pending migrations only
+
+# ❌ Never do this in production:
+# psql -c "ALTER TABLE users ADD COLUMN avatar_url TEXT;"`,
+    },
+    quiz: {
+      question: "A migration already ran in production. You need to change the column type. What do you do?",
+      options: [
+        "Edit the existing migration file",
+        "Drop the production database and re-run all migrations",
+        "Create a new migration that alters the column",
+        "Change the schema manually in production",
+      ],
+      correctIndex: 2,
+      explanation:
+        "Never edit applied migrations — other environments already recorded them as done. Create a new migration for the change.",
+    },
+  },
+  {
+    id: "transactions",
+    title: "Transactions & ACID",
+    phase: "Application Layer",
+    summary:
+      "A database transaction groups multiple operations into one atomic unit — either all succeed or all roll back. Transferring money means debiting one account AND crediting another; if the credit fails, the debit must be undone. ACID guarantees: Atomicity (all or nothing), Consistency (valid state), Isolation (concurrent transactions don't interfere), Durability (committed data survives crashes).",
+    frontendAnalogy:
+      "Like a shopping cart checkout — if payment fails, the order shouldn't be created and inventory shouldn't be reduced. From the frontend you send one POST /orders request; the backend wraps all related DB writes in a transaction so you never see half-completed state.",
+    backendPerspective:
+      "You wrap related writes in `db.transaction(async (tx) => { ... })` using your ORM or raw `BEGIN / COMMIT / ROLLBACK`. Use transactions when multiple tables must stay consistent (order + order_items + inventory). Keep transactions short — long-running transactions block other queries. For distributed systems across multiple databases, you need saga patterns or two-phase commit — much harder than single-DB transactions.",
+    keyPoints: [
+      "Atomicity — if any step fails, the entire transaction rolls back; no partial updates.",
+      "Use when — creating an order + line items, transferring funds, any multi-table write that must be consistent.",
+      "Isolation levels — READ COMMITTED (default), REPEATABLE READ, SERIALIZABLE; higher = safer but slower.",
+      "Keep transactions short — don't call external APIs (email, Stripe) inside a transaction; do DB work only.",
+      "Deadlocks — two transactions waiting on each other; databases detect and abort one; retry logic handles it.",
+    ],
+    terminology: [
+      {
+        term: "ACID",
+        definition:
+          "Atomicity, Consistency, Isolation, Durability — the four guarantees of a reliable database transaction.",
+      },
+      {
+        term: "Rollback",
+        definition:
+          "Undo all changes in the current transaction. Triggered automatically on error or explicitly with ROLLBACK.",
+      },
+      {
+        term: "Isolation level",
+        definition:
+          "How much concurrent transactions can see each other's uncommitted changes. SERIALIZABLE is safest; READ COMMITTED is default in PostgreSQL.",
+      },
+    ],
+    example: {
+      title: "Transfer funds in a transaction",
+      language: "typescript",
+      code: `async function transfer(fromId: string, toId: string, amount: number) {
+  return db.$transaction(async (tx) => {
+    // 1. Debit sender
+    const sender = await tx.account.update({
+      where: { id: fromId },
+      data: { balance: { decrement: amount } },
+    });
+    if (sender.balance < 0) throw new Error('Insufficient funds');
+
+    // 2. Credit receiver
+    await tx.account.update({
+      where: { id: toId },
+      data: { balance: { increment: amount } },
+    });
+
+    // 3. Log the transfer
+    return tx.transfer.create({ data: { fromId, toId, amount } });
+
+    // If ANY step throws → entire transaction rolls back
+    // Sender balance is NOT debited if credit fails
+  });
+}`,
+    },
+    quiz: {
+      question: "Why should you NOT send a welcome email inside a database transaction?",
+      options: [
+        "Emails can't be rolled back — if the transaction fails after sending, data is inconsistent",
+        "Databases can't store email addresses",
+        "Transactions are only for SELECT queries",
+        "Email APIs don't support transactions",
+      ],
+      correctIndex: 0,
+      explanation:
+        "Transactions should only contain DB operations. External side effects (email, payments) can't be rolled back. Do DB work in the transaction, then send email after commit.",
     },
   },
   {
