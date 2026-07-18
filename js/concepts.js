@@ -1,15 +1,18 @@
+import { nodejsConcepts } from "./nodejs-concepts.js";
+
 const PLAYLIST_URL =
   "https://www.youtube.com/playlist?list=PLui3EUkuMTPgZcV0QhQrOcwMPcBCcd_Q1";
 
 const PHASES = [
   "Foundations",
+  "Node.js",
   "Security & Pipeline",
   "Application Layer",
   "Data & Performance",
   "Operations & Advanced",
 ];
 
-const backendConcepts = [
+const coreConcepts = [
   {
     id: "http",
     title: "HTTP Protocol",
@@ -2388,6 +2391,8 @@ components:
     },
   },
 ];
+
+const backendConcepts = [...coreConcepts, ...nodejsConcepts];
 
 function getConceptById(id) {
   return backendConcepts.find((c) => c.id === id);

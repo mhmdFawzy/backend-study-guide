@@ -8,7 +8,7 @@ Based on the [Backend from First Principles](https://www.youtube.com/playlist?li
 
 ## What's inside
 
-- 39 backend concepts with frontend-friendly explanations
+- 54 backend concepts with frontend-friendly explanations (including a full Node.js section)
 - Code examples for every topic
 - Interactive HTTP request builder
 - Middleware pipeline visualizer
@@ -20,6 +20,7 @@ Based on the [Backend from First Principles](https://www.youtube.com/playlist?li
 | Phase | Concepts |
 |-------|----------|
 | Foundations | HTTP, Servers, Routing, Serialization |
+| **Node.js** | npm, TypeScript, process, path/os/crypto, timers, async/await, fs, buffers, URL, EventEmitter, streams, HTTP module, fetch, runtime internals, cluster |
 | Security & Pipeline | Auth, Validation, Middleware, CORS, Rate Limiting, Request Context |
 | Application Layer | MVC, CRUD, REST, GraphQL, Pagination, Idempotency, Databases, Migrations, Transactions, Business Logic |
 | Data & Performance | Caching, Emails, Queues, Elasticsearch, Errors |
