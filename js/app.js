@@ -3,14 +3,14 @@ import {
   PHASES,
   backendConcepts,
   getConceptById,
-} from "./concepts.js?v=9";
+} from "./concepts.js?v=10";
 import {
   loadNotes,
   hasNote,
   renderNotesCard,
   setupBackupPanel,
   flushPendingNote,
-} from "./notes.js?v=9";
+} from "./notes.js?v=10";
 
 const STORAGE_KEY = "backend-study-progress";
 
