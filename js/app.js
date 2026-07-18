@@ -3,14 +3,14 @@ import {
   PHASES,
   backendConcepts,
   getConceptById,
-} from "./concepts.js?v=7";
+} from "./concepts.js?v=10";
 import {
   loadNotes,
   hasNote,
   renderNotesCard,
   setupBackupPanel,
   flushPendingNote,
-} from "./notes.js?v=7";
+} from "./notes.js?v=10";
 
 const STORAGE_KEY = "backend-study-progress";
 
@@ -363,6 +363,16 @@ function renderContent() {
       </div>
     </div>` : ""}
 
+    ${concept.packages?.length ? `
+    <div class="card packages-card">
+      <h3 class="packages-title">Popular npm packages</h3>
+      <ul class="packages-list">
+        ${concept.packages.map((pkg) => `
+          <li><code>${esc(pkg.name)}</code> — ${esc(pkg.use)}</li>
+        `).join("")}
+      </ul>
+    </div>` : ""}
+
     <h3 style="font-weight:600;margin-bottom:0.75rem">Key points</h3>
     <ul class="key-points">
       ${concept.keyPoints.map((p) => `<li>${esc(p)}</li>`).join("")}
@@ -370,6 +380,7 @@ function renderContent() {
 
     <div class="card">
       <h3>${esc(concept.example.title)}</h3>
+      ${concept.example.ref ? `<p class="example-ref">📁 Runnable: <code>${esc(concept.example.ref)}</code></p>` : ""}
       <pre><code>${esc(concept.example.code)}</code></pre>
     </div>
 
